@@ -442,6 +442,20 @@ class HockeyScoreboardPlugin(BasePlugin):
     def _has_recent_games(self) -> bool:
         """Check if there are any recent games available."""
         return any(game.get('status', {}).get('state') == 'post' for game in self.current_games)
+
+    def has_live_content(self) -> bool:
+        """
+        Override BasePlugin method to indicate when plugin has live content.
+        This is used by display controller for live priority system.
+        """
+        return self._has_live_games()
+    
+    def get_live_modes(self) -> list:
+        """
+        Override BasePlugin method to specify which modes to show during live priority.
+        Only show the live mode, not recent/upcoming.
+        """
+        return ['hockey_live']
     
     def _display_game(self, game: Dict, mode: str):
         """Display a single game."""
