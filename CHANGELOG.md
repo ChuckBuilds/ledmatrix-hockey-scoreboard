@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.0.2] - 2025-10-20
+
+### Added
+- **Proper Font Loading**: Load PressStart2P and 4x6 fonts matching original managers
+- **Logo Loading**: Full logo path resolution with case-insensitive matching
+- **Logo Sizing**: Logos properly scaled to display dimensions (width/height * 1.5)
+- **Scoreboard Rendering**: Professional scoreboard layout with team logos, scores, and status
+- **Text Outline**: Text rendering with black outlines for better readability
+
+### Changed
+- **Replaced Placeholder**: Removed TODO comments and placeholder text rendering
+- **Visual Parity**: Now matches original hockey manager layout and appearance
+
 ## [1.0.1] - 2025-10-20
 
 ### Fixed

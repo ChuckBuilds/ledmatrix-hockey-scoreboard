@@ -18,6 +18,7 @@ API Version: 1.0.0
 """
 
 import logging
+import os
 import time
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, List
@@ -25,7 +26,7 @@ from pathlib import Path
 
 import pytz
 import requests
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFont
 
 from src.plugin_system.base_plugin import BasePlugin
 
@@ -105,6 +106,9 @@ class HockeyScoreboardPlugin(BasePlugin):
         self.last_update = 0
         self.initialized = True
 
+        # Load fonts for rendering
+        self.fonts = self._load_fonts()
+
         # Register fonts
         self._register_fonts()
 
@@ -116,6 +120,27 @@ class HockeyScoreboardPlugin(BasePlugin):
 
         self.logger.info(f"Hockey scoreboard plugin initialized")
         self.logger.info(f"Enabled leagues: {enabled_leagues}")
+    
+    def _load_fonts(self):
+        """Load fonts used by the scoreboard - matching original managers."""
+        fonts = {}
+        try:
+            fonts['score'] = ImageFont.truetype("assets/fonts/PressStart2P-Regular.ttf", 10)
+            fonts['time'] = ImageFont.truetype("assets/fonts/PressStart2P-Regular.ttf", 8)
+            fonts['team'] = ImageFont.truetype("assets/fonts/PressStart2P-Regular.ttf", 8)
+            fonts['status'] = ImageFont.truetype("assets/fonts/4x6-font.ttf", 6)
+            fonts['detail'] = ImageFont.truetype("assets/fonts/4x6-font.ttf", 6)
+            fonts['rank'] = ImageFont.truetype("assets/fonts/PressStart2P-Regular.ttf", 10)
+            self.logger.info("Successfully loaded fonts")
+        except IOError as e:
+            self.logger.warning(f"Fonts not found, using default PIL font: {e}")
+            fonts['score'] = ImageFont.load_default()
+            fonts['time'] = ImageFont.load_default()
+            fonts['team'] = ImageFont.load_default()
+            fonts['status'] = ImageFont.load_default()
+            fonts['detail'] = ImageFont.load_default()
+            fonts['rank'] = ImageFont.load_default()
+        return fonts
     
     def _register_fonts(self):
         """Register fonts with the font manager."""
@@ -457,37 +482,129 @@ class HockeyScoreboardPlugin(BasePlugin):
         """
         return ['hockey_live']
     
+    def _load_team_logo(self, team: Dict, league: str) -> Optional[Image.Image]:
+        """Load and resize team logo - matching football plugin logic."""
+        try:
+            league_config = self.leagues.get(league, {})
+            logo_dir = league_config.get('logo_dir', 'assets/sports/nhl_logos')
+            
+            if not os.path.isabs(logo_dir):
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+                ledmatrix_root = None
+                for parent in [current_dir, os.path.dirname(current_dir), os.path.dirname(os.path.dirname(current_dir))]:
+                    if os.path.exists(os.path.join(parent, 'assets', 'sports')):
+                        ledmatrix_root = parent
+                        break
+                
+                if ledmatrix_root:
+                    logo_dir = os.path.join(ledmatrix_root, logo_dir)
+                else:
+                    logo_dir = os.path.abspath(logo_dir)
+            
+            team_abbrev = team.get('abbrev', '')
+            if not team_abbrev:
+                return None
+            
+            logo_extensions = ['.png', '.jpg', '.jpeg']
+            logo_path = None
+            abbrev_variations = [team_abbrev.upper(), team_abbrev.lower(), team_abbrev]
+            
+            for abbrev in abbrev_variations:
+                for ext in logo_extensions:
+                    potential_path = os.path.join(logo_dir, f"{abbrev}{ext}")
+                    if os.path.exists(potential_path):
+                        logo_path = potential_path
+                        break
+                if logo_path:
+                    break
+            
+            if not logo_path:
+                return None
+            
+            logo = Image.open(logo_path).convert('RGBA')
+            max_width = int(self.display_manager.matrix.width * 1.5)
+            max_height = int(self.display_manager.matrix.height * 1.5)
+            logo.thumbnail((max_width, max_height), Image.Resampling.LANCZOS)
+            
+            return logo
+            
+        except Exception as e:
+            self.logger.debug(f"Could not load logo for {team.get('abbrev', 'unknown')}: {e}")
+            return None
+
+    def _draw_text_with_outline(self, draw: ImageDraw.Draw, text: str, position: tuple, font, fill=(255, 255, 255), outline_color=(0, 0, 0)):
+        """Draw text with a black outline for better readability."""
+        try:
+            x, y = position
+            for dx, dy in [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]:
+                draw.text((x + dx, y + dy), text, font=font, fill=outline_color)
+            draw.text((x, y), text, font=font, fill=fill)
+        except Exception as e:
+            self.logger.error(f"Error drawing text with outline: {e}")
+    
     def _display_game(self, game: Dict, mode: str):
-        """Display a single game."""
+        """Display a single hockey game with proper scoreboard layout."""
         try:
             matrix_width = self.display_manager.matrix.width
             matrix_height = self.display_manager.matrix.height
             
-            # Create image
-            img = Image.new('RGB', (matrix_width, matrix_height), (0, 0, 0))
-            draw = ImageDraw.Draw(img)
+            main_img = Image.new('RGBA', (matrix_width, matrix_height), (0, 0, 0, 255))
+            overlay = Image.new('RGBA', (matrix_width, matrix_height), (0, 0, 0, 0))
+            draw_overlay = ImageDraw.Draw(overlay)
             
-            # Get team info
             home_team = game.get('home_team', {})
             away_team = game.get('away_team', {})
             status = game.get('status', {})
+
+            home_logo = self._load_team_logo(home_team, game.get('league', ''))
+            away_logo = self._load_team_logo(away_team, game.get('league', ''))
+
+            if home_logo and away_logo:
+                center_y = matrix_height // 2
+                home_x = matrix_width - home_logo.width + 10
+                home_y = center_y - (home_logo.height // 2)
+                main_img.paste(home_logo, (home_x, home_y), home_logo)
+                
+                away_x = -10
+                away_y = center_y - (away_logo.height // 2)
+                main_img.paste(away_logo, (away_x, away_y), away_logo)
+                
+                home_score = str(home_team.get('score', 0))
+                away_score = str(away_team.get('score', 0))
+                score_text = f"{away_score}-{home_score}"
+                
+                score_width = draw_overlay.textlength(score_text, font=self.fonts['score'])
+                score_x = (matrix_width - score_width) // 2
+                score_y = (matrix_height // 2) - 3
+                self._draw_text_with_outline(draw_overlay, score_text, (score_x, score_y), self.fonts['score'], fill=(255, 200, 0))
+                
+                if status.get('state') == 'post':
+                    status_text = "FINAL"
+                elif status.get('state') == 'pre':
+                    status_text = "UPCOMING"
+                else:
+                    status_text = status.get('detail', status.get('short_detail', ''))
+                
+                status_width = draw_overlay.textlength(status_text, font=self.fonts['time'])
+                status_x = (matrix_width - status_width) // 2
+                status_y = 1
+                self._draw_text_with_outline(draw_overlay, status_text, (status_x, status_y), self.fonts['time'], fill=(0, 255, 0))
+                
+                final_img = Image.alpha_composite(main_img, overlay)
+                self.display_manager.image = final_img.convert('RGB').copy()
+            else:
+                img = Image.new('RGB', (matrix_width, matrix_height), (0, 0, 0))
+                draw = ImageDraw.Draw(img)
+                
+                home_abbrev = home_team.get('abbrev', 'HOME')
+                away_abbrev = away_team.get('abbrev', 'AWAY')
+                
+                draw.text((5, 5), f"{away_abbrev} @ {home_abbrev}", fill=(255, 255, 255))
+                draw.text((5, 15), f"{away_team.get('score', 0)} - {home_team.get('score', 0)}", fill=(255, 200, 0))
+                draw.text((5, 25), status.get('short_detail', ''), fill=(0, 255, 0))
+                
+                self.display_manager.image = img.copy()
             
-            # Display team names/abbreviations
-            home_abbrev = home_team.get('abbrev', 'HOME')
-            away_abbrev = away_team.get('abbrev', 'AWAY')
-            
-            # TODO: Add team logos if available
-            # TODO: Use font manager for text rendering
-            # TODO: Add scores, period, time display
-            # TODO: Add powerplay indicator
-            # TODO: Add shots on goal if enabled
-            
-            # For now, simple text display (placeholder)
-            draw.text((5, 5), f"{away_abbrev} @ {home_abbrev}", fill=(255, 255, 255))
-            draw.text((5, 15), f"{away_team.get('score', 0)} - {home_team.get('score', 0)}", fill=(255, 200, 0))
-            draw.text((5, 25), status.get('short_detail', ''), fill=(0, 255, 0))
-            
-            self.display_manager.image = img.copy()
             self.display_manager.update_display()
             
         except Exception as e:
