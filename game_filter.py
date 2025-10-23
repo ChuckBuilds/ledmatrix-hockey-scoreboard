@@ -15,12 +15,13 @@ class HockeyGameFilter:
         """Initialize the game filter."""
         self.logger = logger
     
-    def sort_games(self, games: List[Dict]) -> List[Dict]:
+    def sort_games(self, games: List[Dict], mode: str = None) -> List[Dict]:
         """
         Sort games by priority and favorites.
         
         Args:
             games: List of game dictionaries
+            mode: Display mode to determine sort order
             
         Returns:
             Sorted list of games
@@ -40,12 +41,25 @@ class HockeyGameFilter:
             # Priority 2: Favorite teams
             favorite_score = 0 if self._is_favorite_game(game) else 1
             
-            # Priority 3: Start time (earlier games first for upcoming, later for recent)
+            # Priority 3: Start time - reverse order for recent games
             start_time = game.get('start_time', '')
+            if mode == 'hockey_recent':
+                # For recent games, we want most recent first (descending order)
+                # Use negative timestamp for proper reverse sorting
+                try:
+                    from datetime import datetime
+                    dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                    time_score = -dt.timestamp()  # Negative for reverse order
+                except:
+                    time_score = start_time  # Fallback to string
+            else:
+                # For live and upcoming, use normal order
+                time_score = start_time
             
-            return (live_score, favorite_score, start_time)
+            return (live_score, favorite_score, time_score)
         
-        return sorted(games, key=sort_key)
+        sorted_games = sorted(games, key=sort_key)
+        return sorted_games
     
     def filter_games_by_mode(self, games: List[Dict], mode: str) -> List[Dict]:
         """
@@ -58,10 +72,9 @@ class HockeyGameFilter:
         Returns:
             Filtered list of games
         """
-        filtered = []
-        
+        # First, filter by game state
+        state_filtered = []
         for game in games:
-            league_key = game.get('league')
             league_config = game.get('league_config', {})
             status = game.get('status', {})
             state = status.get('state')
@@ -72,25 +85,38 @@ class HockeyGameFilter:
             if not mode_enabled:
                 continue
             
-            # Filter by game state and per-league limits
+            # Filter by game state
             if mode == 'hockey_live' and state == 'in':
-                filtered.append(game)
-                
+                state_filtered.append(game)
             elif mode == 'hockey_recent' and state == 'post':
-                # Check recent games limit for this league
-                recent_limit = league_config.get('recent_games_to_show', 5)
-                recent_count = len([g for g in filtered if g.get('league') == league_key and g.get('status', {}).get('state') == 'post'])
-                if recent_count >= recent_limit:
-                    continue
-                filtered.append(game)
-                
+                state_filtered.append(game)
             elif mode == 'hockey_upcoming' and state == 'pre':
-                # Check upcoming games limit for this league
-                upcoming_limit = league_config.get('upcoming_games_to_show', 10)
-                upcoming_count = len([g for g in filtered if g.get('league') == league_key and g.get('status', {}).get('state') == 'pre'])
-                if upcoming_count >= upcoming_limit:
-                    continue
+                state_filtered.append(game)
+        
+        # Sort the state-filtered games first
+        sorted_games = self.sort_games(state_filtered, mode)
+        
+        # Then apply per-league limits
+        filtered = []
+        league_counts = {}
+        
+        for game in sorted_games:
+            league_key = game.get('league')
+            league_config = game.get('league_config', {})
+            
+            # Get the limit for this league and mode
+            if mode == 'hockey_recent':
+                limit = league_config.get('recent_games_to_show', 5)
+            elif mode == 'hockey_upcoming':
+                limit = league_config.get('upcoming_games_to_show', 10)
+            else:  # hockey_live
+                limit = league_config.get('live_games_to_show', 10)
+            
+            # Count games for this league
+            current_count = league_counts.get(league_key, 0)
+            if current_count < limit:
                 filtered.append(game)
+                league_counts[league_key] = current_count + 1
         
         return filtered
     

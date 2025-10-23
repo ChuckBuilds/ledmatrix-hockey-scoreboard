@@ -109,11 +109,6 @@
       "maximum": 20,
       "description": "Maximum number of upcoming games to display"
     },
-    "show_favorite_teams_only": {
-      "type": "boolean",
-      "default": true,
-      "description": "Only show games from favorite teams"
-    },
     "show_all_live": {
       "type": "boolean",
       "default": false,
@@ -262,11 +257,6 @@
           "minimum": 60,
           "maximum": 86400,
           "description": "Update interval for upcoming NHL games (seconds)"
-        },
-        "show_favorite_teams_only": {
-          "type": "boolean",
-          "default": false,
-          "description": "Only show NHL games from favorite teams"
         },
         "show_all_live": {
           "type": "boolean",
@@ -428,11 +418,6 @@
           "maximum": 86400,
           "description": "Update interval for upcoming NCAA Men's Hockey games (seconds)"
         },
-        "show_favorite_teams_only": {
-          "type": "boolean",
-          "default": false,
-          "description": "Only show NCAA Men's Hockey games from favorite teams"
-        },
         "show_all_live": {
           "type": "boolean",
           "default": true,
@@ -592,11 +577,6 @@
           "minimum": 60,
           "maximum": 86400,
           "description": "Update interval for upcoming NCAA Women's Hockey games (seconds)"
-        },
-        "show_favorite_teams_only": {
-          "type": "boolean",
-          "default": false,
-          "description": "Only show NCAA Women's Hockey games from favorite teams"
         },
         "show_all_live": {
           "type": "boolean",

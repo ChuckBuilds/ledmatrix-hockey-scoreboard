@@ -19,8 +19,8 @@ from urllib3.util.retry import Retry
 class HockeyDataFetcher:
     """Handles data fetching for hockey scoreboard plugin."""
     
-    # ESPN API endpoints for each league
-    ESPN_API_URLS = {
+    # ESPN API base endpoints for each league
+    ESPN_API_BASE_URLS = {
         'nhl': 'https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard',
         'ncaa_mens': 'https://site.api.espn.com/apis/site/v2/sports/hockey/mens-college-hockey/scoreboard',
         'ncaa_womens': 'https://site.api.espn.com/apis/site/v2/sports/hockey/womens-college-hockey/scoreboard'
@@ -52,6 +52,32 @@ class HockeyDataFetcher:
             'Connection': 'keep-alive'
         }
     
+    def _get_season_date_range(self, league_key: str) -> str:
+        """Get the date range for the current season."""
+        from datetime import datetime, timedelta
+        
+        now = datetime.now()
+        current_year = now.year
+        
+        # For 2025, we want the 2025-26 season (October 2025 to end of season 2026)
+        if league_key == 'nhl':
+            # NHL 2025-26 season: October 2025 to June 2026
+            season_start = datetime(2025, 10, 1)
+            season_end = datetime(2026, 6, 30)
+        elif league_key in ['ncaa_mens', 'ncaa_womens']:
+            # NCAA 2025-26 season: October 2025 to March 2026
+            season_start = datetime(2025, 10, 1)
+            season_end = datetime(2026, 3, 31)
+        else:
+            # Default to 2025-26 season
+            season_start = datetime(2025, 10, 1)
+            season_end = datetime(2026, 6, 30)
+        
+        # Format as YYYYMMDD-YYYYMMDD
+        start_str = season_start.strftime('%Y%m%d')
+        end_str = season_end.strftime('%Y%m%d')
+        return f"{start_str}-{end_str}"
+    
     def fetch_league_data(self, league_key: str, league_config: Dict, 
                          last_update: float = 0) -> List[Dict]:
         """
@@ -76,12 +102,16 @@ class HockeyDataFetcher:
         
         # Fetch from API
         try:
-            url = self.ESPN_API_URLS.get(league_key)
-            if not url:
+            base_url = self.ESPN_API_BASE_URLS.get(league_key)
+            if not base_url:
                 self.logger.error(f"Unknown league key: {league_key}")
                 return []
             
-            self.logger.info(f"Fetching {league_key} data from ESPN API...")
+            # Get the season date range
+            date_range = self._get_season_date_range(league_key)
+            url = f"{base_url}?dates={date_range}"
+            
+            self.logger.info(f"Fetching {league_key} data from ESPN API for season {date_range}...")
             response = self.session.get(
                 url, 
                 timeout=league_config.get('request_timeout', 30),

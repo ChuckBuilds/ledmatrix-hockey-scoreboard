@@ -292,19 +292,28 @@ class HockeyScoreboardRenderer:
             
             center_y = matrix_height // 2
             
-            # Draw logos (matching NHL manager positioning)
-            home_x = matrix_width - home_logo.width + 2  # MLB-style positioning
+            # Draw logos (matching SportsUpcoming positioning - MLB-style)
+            home_x = matrix_width - home_logo.width + 2  # SportsUpcoming style
             home_y = center_y - (home_logo.height // 2)
             main_img.paste(home_logo, (home_x, home_y), home_logo)
             
-            away_x = -2  # MLB-style positioning
+            away_x = -2  # SportsUpcoming style
             away_y = center_y - (away_logo.height // 2)
             main_img.paste(away_logo, (away_x, away_y), away_logo)
             
-            # Draw game time and date (matching NHL manager)
+            # Draw "Next Game" at the top (matching SportsUpcoming)
+            status_font = self.fonts['status']
+            if matrix_width > 128:
+                status_font = self.fonts['time']
+            status_text = "Next Game"
+            status_width = draw_overlay.textlength(status_text, font=status_font)
+            status_x = (matrix_width - status_width) // 2
+            status_y = 1
+            self._draw_text_with_outline(draw_overlay, status_text, (status_x, status_y), status_font)
+            
+            # Draw game date and time (matching SportsUpcoming layout)
             start_time = game.get("start_time", "")
             if start_time:
-                # Parse the start time and format it nicely
                 try:
                     from datetime import datetime
                     import pytz
@@ -316,27 +325,33 @@ class HockeyScoreboardRenderer:
                     local_tz = pytz.timezone('America/New_York')  # Default to Eastern
                     local_dt = dt.astimezone(local_tz)
                     
-                    # Format as "Oct 22 7:00 PM"
-                    time_text = local_dt.strftime("%b %d %I:%M %p")
+                    # Format date and time separately (matching SportsUpcoming)
+                    game_date = local_dt.strftime("%b %d")  # "Oct 22"
+                    game_time = local_dt.strftime("%I:%M %p")  # "7:00 PM"
                     
-                    time_width = draw_overlay.textlength(time_text, font=self.fonts['time'])
+                    # Draw date (centered, below "Next Game")
+                    date_width = draw_overlay.textlength(game_date, font=self.fonts['time'])
+                    date_x = (matrix_width - date_width) // 2
+                    date_y = center_y - 7  # Raise date slightly (matching SportsUpcoming)
+                    self._draw_text_with_outline(draw_overlay, game_date, (date_x, date_y), self.fonts['time'])
+                    
+                    # Draw time (centered, below date)
+                    time_width = draw_overlay.textlength(game_time, font=self.fonts['time'])
                     time_x = (matrix_width - time_width) // 2
-                    time_y = 1
-                    self._draw_text_with_outline(draw_overlay, time_text, (time_x, time_y), self.fonts['time'])
+                    time_y = date_y + 9  # Place time below date (matching SportsUpcoming)
+                    self._draw_text_with_outline(draw_overlay, game_time, (time_x, time_y), self.fonts['time'])
+                    
                 except Exception as e:
                     # Fallback to raw time if parsing fails
                     time_text = start_time[:16]  # Truncate to reasonable length
                     time_width = draw_overlay.textlength(time_text, font=self.fonts['time'])
                     time_x = (matrix_width - time_width) // 2
-                    time_y = 1
+                    time_y = center_y - 7
                     self._draw_text_with_outline(draw_overlay, time_text, (time_x, time_y), self.fonts['time'])
             
-            # Draw "VS" in center (matching NHL manager)
-            vs_text = "VS"
-            vs_width = draw_overlay.textlength(vs_text, font=self.fonts['score'])
-            vs_x = (matrix_width - vs_width) // 2
-            vs_y = (matrix_height // 2) - 3
-            self._draw_text_with_outline(draw_overlay, vs_text, (vs_x, vs_y), self.fonts['score'])
+            # Draw records/rankings if available (matching SportsUpcoming)
+            # Note: This would need to be implemented based on the game data structure
+            # For now, we'll skip this to match the basic functionality
             
             # Composite the text overlay onto the main image
             main_img = Image.alpha_composite(main_img, overlay)
