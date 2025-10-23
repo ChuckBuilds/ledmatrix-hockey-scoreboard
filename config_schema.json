@@ -224,6 +224,107 @@
           "minimum": 15,
           "maximum": 300,
           "description": "NHL data update interval in seconds"
+        },
+        "live_priority": {
+          "type": "boolean",
+          "default": true,
+          "description": "Prioritize live NHL games over scheduled games"
+        },
+        "live_game_duration": {
+          "type": "number",
+          "default": 20,
+          "minimum": 10,
+          "maximum": 120,
+          "description": "Duration in seconds to display live NHL games"
+        },
+        "show_odds": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show betting odds for NHL games"
+        },
+        "live_update_interval": {
+          "type": "number",
+          "default": 30,
+          "minimum": 10,
+          "maximum": 300,
+          "description": "Update interval for live NHL games (seconds)"
+        },
+        "recent_update_interval": {
+          "type": "number",
+          "default": 3600,
+          "minimum": 60,
+          "maximum": 86400,
+          "description": "Update interval for recent NHL games (seconds)"
+        },
+        "upcoming_update_interval": {
+          "type": "number",
+          "default": 3600,
+          "minimum": 60,
+          "maximum": 86400,
+          "description": "Update interval for upcoming NHL games (seconds)"
+        },
+        "show_favorite_teams_only": {
+          "type": "boolean",
+          "default": false,
+          "description": "Only show NHL games from favorite teams"
+        },
+        "show_all_live": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show all live NHL games, not just favorites"
+        },
+        "show_shots_on_goal": {
+          "type": "boolean",
+          "default": true,
+          "description": "Display shots on goal statistics for NHL games"
+        },
+        "show_powerplay": {
+          "type": "boolean",
+          "default": true,
+          "description": "Highlight powerplay situations for NHL games"
+        },
+        "show_records": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show NHL team records (wins-losses)"
+        },
+        "show_ranking": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show NHL team rankings/standings"
+        },
+        "favorite_teams_only": {
+          "type": "boolean",
+          "default": false,
+          "description": "Only show NHL games with favorite teams"
+        },
+        "game_rotation_interval_seconds": {
+          "type": "number",
+          "default": 10,
+          "minimum": 5,
+          "maximum": 60,
+          "description": "How long to display each NHL game before rotating (seconds)"
+        },
+        "live_display_duration": {
+          "type": "number",
+          "default": 20,
+          "minimum": 5,
+          "maximum": 120,
+          "description": "Duration to display live NHL games (seconds)"
+        },
+        "recent_display_duration": {
+          "type": "number",
+          "default": 15,
+          "minimum": 5,
+          "maximum": 60,
+          "description": "Duration to display recent NHL games (seconds)"
+        },
+        "upcoming_display_duration": {
+          "type": "number",
+          "default": 15,
+          "minimum": 5,
+          "maximum": 60,
+          "description": "Duration to display upcoming NHL games (seconds)"
         }
       }
     },
@@ -284,10 +385,111 @@
         },
         "update_interval_seconds": {
           "type": "number",
-          "default": 120,
+          "default": 300,
           "minimum": 30,
           "maximum": 600,
           "description": "NCAA Men's Hockey data update interval in seconds"
+        },
+        "live_priority": {
+          "type": "boolean",
+          "default": false,
+          "description": "Prioritize live NCAA Men's Hockey games over scheduled games"
+        },
+        "live_game_duration": {
+          "type": "number",
+          "default": 15,
+          "minimum": 10,
+          "maximum": 120,
+          "description": "Duration in seconds to display live NCAA Men's Hockey games"
+        },
+        "show_odds": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show betting odds for NCAA Men's Hockey games"
+        },
+        "live_update_interval": {
+          "type": "number",
+          "default": 60,
+          "minimum": 10,
+          "maximum": 300,
+          "description": "Update interval for live NCAA Men's Hockey games (seconds)"
+        },
+        "recent_update_interval": {
+          "type": "number",
+          "default": 3600,
+          "minimum": 60,
+          "maximum": 86400,
+          "description": "Update interval for recent NCAA Men's Hockey games (seconds)"
+        },
+        "upcoming_update_interval": {
+          "type": "number",
+          "default": 3600,
+          "minimum": 60,
+          "maximum": 86400,
+          "description": "Update interval for upcoming NCAA Men's Hockey games (seconds)"
+        },
+        "show_favorite_teams_only": {
+          "type": "boolean",
+          "default": false,
+          "description": "Only show NCAA Men's Hockey games from favorite teams"
+        },
+        "show_all_live": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show all live NCAA Men's Hockey games, not just favorites"
+        },
+        "show_shots_on_goal": {
+          "type": "boolean",
+          "default": false,
+          "description": "Display shots on goal statistics for NCAA Men's Hockey games"
+        },
+        "show_powerplay": {
+          "type": "boolean",
+          "default": false,
+          "description": "Highlight powerplay situations for NCAA Men's Hockey games"
+        },
+        "show_records": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show NCAA Men's Hockey team records (wins-losses)"
+        },
+        "show_ranking": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show NCAA Men's Hockey team rankings/standings"
+        },
+        "favorite_teams_only": {
+          "type": "boolean",
+          "default": false,
+          "description": "Only show NCAA Men's Hockey games with favorite teams"
+        },
+        "game_rotation_interval_seconds": {
+          "type": "number",
+          "default": 15,
+          "minimum": 5,
+          "maximum": 60,
+          "description": "How long to display each NCAA Men's Hockey game before rotating (seconds)"
+        },
+        "live_display_duration": {
+          "type": "number",
+          "default": 15,
+          "minimum": 5,
+          "maximum": 120,
+          "description": "Duration to display live NCAA Men's Hockey games (seconds)"
+        },
+        "recent_display_duration": {
+          "type": "number",
+          "default": 15,
+          "minimum": 5,
+          "maximum": 60,
+          "description": "Duration to display recent NCAA Men's Hockey games (seconds)"
+        },
+        "upcoming_display_duration": {
+          "type": "number",
+          "default": 15,
+          "minimum": 5,
+          "maximum": 60,
+          "description": "Duration to display upcoming NCAA Men's Hockey games (seconds)"
         }
       }
     },
@@ -348,10 +550,111 @@
         },
         "update_interval_seconds": {
           "type": "number",
-          "default": 180,
+          "default": 300,
           "minimum": 60,
           "maximum": 900,
           "description": "NCAA Women's Hockey data update interval in seconds"
+        },
+        "live_priority": {
+          "type": "boolean",
+          "default": false,
+          "description": "Prioritize live NCAA Women's Hockey games over scheduled games"
+        },
+        "live_game_duration": {
+          "type": "number",
+          "default": 15,
+          "minimum": 10,
+          "maximum": 120,
+          "description": "Duration in seconds to display live NCAA Women's Hockey games"
+        },
+        "show_odds": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show betting odds for NCAA Women's Hockey games"
+        },
+        "live_update_interval": {
+          "type": "number",
+          "default": 60,
+          "minimum": 10,
+          "maximum": 300,
+          "description": "Update interval for live NCAA Women's Hockey games (seconds)"
+        },
+        "recent_update_interval": {
+          "type": "number",
+          "default": 3600,
+          "minimum": 60,
+          "maximum": 86400,
+          "description": "Update interval for recent NCAA Women's Hockey games (seconds)"
+        },
+        "upcoming_update_interval": {
+          "type": "number",
+          "default": 3600,
+          "minimum": 60,
+          "maximum": 86400,
+          "description": "Update interval for upcoming NCAA Women's Hockey games (seconds)"
+        },
+        "show_favorite_teams_only": {
+          "type": "boolean",
+          "default": false,
+          "description": "Only show NCAA Women's Hockey games from favorite teams"
+        },
+        "show_all_live": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show all live NCAA Women's Hockey games, not just favorites"
+        },
+        "show_shots_on_goal": {
+          "type": "boolean",
+          "default": false,
+          "description": "Display shots on goal statistics for NCAA Women's Hockey games"
+        },
+        "show_powerplay": {
+          "type": "boolean",
+          "default": false,
+          "description": "Highlight powerplay situations for NCAA Women's Hockey games"
+        },
+        "show_records": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show NCAA Women's Hockey team records (wins-losses)"
+        },
+        "show_ranking": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show NCAA Women's Hockey team rankings/standings"
+        },
+        "favorite_teams_only": {
+          "type": "boolean",
+          "default": false,
+          "description": "Only show NCAA Women's Hockey games with favorite teams"
+        },
+        "game_rotation_interval_seconds": {
+          "type": "number",
+          "default": 15,
+          "minimum": 5,
+          "maximum": 60,
+          "description": "How long to display each NCAA Women's Hockey game before rotating (seconds)"
+        },
+        "live_display_duration": {
+          "type": "number",
+          "default": 15,
+          "minimum": 5,
+          "maximum": 120,
+          "description": "Duration to display live NCAA Women's Hockey games (seconds)"
+        },
+        "recent_display_duration": {
+          "type": "number",
+          "default": 15,
+          "minimum": 5,
+          "maximum": 60,
+          "description": "Duration to display recent NCAA Women's Hockey games (seconds)"
+        },
+        "upcoming_display_duration": {
+          "type": "number",
+          "default": 15,
+          "minimum": 5,
+          "maximum": 60,
+          "description": "Duration to display upcoming NCAA Women's Hockey games (seconds)"
         }
       }
     },
