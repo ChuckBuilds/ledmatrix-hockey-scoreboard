@@ -1,7 +1,7 @@
 {
   "id": "hockey-scoreboard",
   "name": "Hockey Scoreboard",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "author": "ChuckBuilds",
   "description": "Live, recent, and upcoming hockey games across NHL, NCAA Men's, and NCAA Women's hockey with real-time scores and schedules",
   "homepage": "https://github.com/ChuckBuilds/ledmatrix-hockey-plugin",
@@ -38,6 +38,29 @@
       "url": "https://site.api.espn.com/apis/site/v2/sports/hockey/",
       "rate_limit": "No official rate limit, but please use responsibly"
     }
-  ]
+  ],
+  "download_url_template": "https://github.com/ChuckBuilds/ledmatrix-hockey-scoreboard/archive/refs/tags/v{version}.zip",
+  "versions": [
+    {
+      "released": "2025-10-26",
+      "version": "1.0.3",
+      "ledmatrix_min": "2.0.0"
+    },
+    {
+      "released": "2025-10-22",
+      "version": "1.0.2",
+      "ledmatrix_min": "2.0.0"
+    },
+    {
+      "released": "2025-10-22",
+      "version": "1.0.1",
+      "ledmatrix_min": "2.0.0"
+    }
+  ],
+  "last_updated": "2025-10-26",
+  "stars": 0,
+  "downloads": 0,
+  "verified": true,
+  "screenshot": ""
 }
 
