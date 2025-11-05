@@ -1,16 +1,25 @@
 {
   "id": "hockey-scoreboard",
   "name": "Hockey Scoreboard",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "author": "ChuckBuilds",
   "description": "Live, recent, and upcoming hockey games across NHL, NCAA Men's, and NCAA Women's hockey with real-time scores and schedules",
   "homepage": "https://github.com/ChuckBuilds/ledmatrix-hockey-plugin",
   "entry_point": "manager.py",
   "class_name": "HockeyScoreboardPlugin",
   "category": "sports",
-  "tags": ["hockey", "nhl", "ncaa", "sports", "scoreboard", "live-scores"],
+  "tags": [
+    "hockey",
+    "nhl",
+    "ncaa",
+    "sports",
+    "scoreboard",
+    "live-scores"
+  ],
   "icon": "fas fa-hockey-puck",
-  "compatible_versions": [">=2.0.0"],
+  "compatible_versions": [
+    ">=2.0.0"
+  ],
   "ledmatrix_version": "2.0.0",
   "requires": {
     "python": ">=3.9",
@@ -42,6 +51,11 @@
   "download_url_template": "https://github.com/ChuckBuilds/ledmatrix-hockey-scoreboard/archive/refs/tags/v{version}.zip",
   "versions": [
     {
+      "version": "1.0.4",
+      "ledmatrix_min": "2.0.0",
+      "released": "2025-11-05"
+    },
+    {
       "released": "2025-10-26",
       "version": "1.0.3",
       "ledmatrix_min": "2.0.0"
@@ -57,10 +71,9 @@
       "ledmatrix_min": "2.0.0"
     }
   ],
-  "last_updated": "2025-10-26",
+  "last_updated": "2025-11-05",
   "stars": 0,
   "downloads": 0,
   "verified": true,
   "screenshot": ""
 }
-
