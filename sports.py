@@ -1248,6 +1248,10 @@ class SportsRecent(SportsCore):
             
             # Filter for favorite teams only if the config is set
             if self.show_favorite_teams_only:
+                self.logger.info(
+                    f"Filtering recent games for favorite teams only. Favorite teams: {self.favorite_teams}, "
+                    f"Total processed games: {len(processed_games)}"
+                )
                 if not self.favorite_teams:
                     self.logger.warning("show_favorite_teams_only is enabled but no favorite teams configured")
                     team_games = []
@@ -1681,10 +1685,21 @@ class SportsLive(SportsCore):
                             should_add = False
                             if self.show_favorite_teams_only:
                                 # Only show if it's a favorite team game
-                                should_add = (
+                                is_favorite = (
                                     details["home_abbr"] in self.favorite_teams
                                     or details["away_abbr"] in self.favorite_teams
                                 )
+                                if is_favorite:
+                                    self.logger.info(
+                                        f"Found favorite team game: {details['away_abbr']}@{details['home_abbr']}. "
+                                        f"Favorite teams configured: {self.favorite_teams}"
+                                    )
+                                else:
+                                    self.logger.debug(
+                                        f"Skipping game {details['away_abbr']}@{details['home_abbr']} - not a favorite team game. "
+                                        f"Favorite teams: {self.favorite_teams}"
+                                    )
+                                should_add = is_favorite
                             else:
                                 # Show all live games (show_all_live is ignored when favorite_teams_only is False)
                                 should_add = True

@@ -37,6 +37,9 @@ class BaseNHLManager(Hockey):
         self.logger.info(f"Initialized NHL manager with display dimensions: {self.display_width}x{self.display_height}")
         self.logger.info(f"Logo directory: {self.logo_dir}")
         self.logger.info(f"Display modes - Recent: {self.recent_enabled}, Upcoming: {self.upcoming_enabled}, Live: {self.live_enabled}")
+        self.logger.info(f"Favorite teams: {self.favorite_teams}")
+        self.logger.info(f"Show favorite teams only: {self.show_favorite_teams_only}")
+        self.logger.info(f"Show all live: {self.show_all_live}")
  
     def _fetch_nhl_api_data(self, use_cache: bool = True) -> Optional[Dict]:
         """
