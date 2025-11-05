@@ -536,13 +536,15 @@ class SportsCore(ABC):
                 dt = datetime.fromisoformat(game_date_str)
                 # Ensure the datetime is UTC-aware (fromisoformat may create timezone-aware but not pytz.UTC)
                 if dt.tzinfo is None:
-                    # If naive, assume it's UTC
-                    start_time_utc = dt.replace(tzinfo=pytz.UTC)
+                    # If naive, ESPN API typically returns times in Eastern Time for NHL/NFL
+                    # Assume Eastern Time and convert to UTC
+                    eastern = pytz.timezone('America/New_York')
+                    start_time_utc = eastern.localize(dt).astimezone(pytz.UTC)
                 else:
                     # Convert to pytz.UTC for consistency
                     start_time_utc = dt.astimezone(pytz.UTC)
             except ValueError:
-                logging.warning(f"Could not parse game date: {game_date_str}")
+                logging.warning("Could not parse game date: %s", game_date_str)
 
             home_team = next(
                 (c for c in competitors if c.get("homeAway") == "home"), None
