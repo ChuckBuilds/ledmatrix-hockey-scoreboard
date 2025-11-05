@@ -419,9 +419,9 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
                 "available_modes": self.modes,
                 "display_duration": self.display_duration,
                 "game_display_duration": self.game_display_duration,
-                "show_records": self.show_records,
-                "show_ranking": self.show_ranking,
-                "show_odds": self.show_odds,
+                "show_records": getattr(self, 'show_records', False),
+                "show_ranking": getattr(self, 'show_ranking', False),
+                "show_odds": getattr(self, 'show_odds', False),
                 "managers_initialized": {
                     "nhl_live": hasattr(self, "nhl_live"),
                     "nhl_recent": hasattr(self, "nhl_recent"),
