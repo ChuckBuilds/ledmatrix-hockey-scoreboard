@@ -160,6 +160,20 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
         except Exception as e:
             self.logger.error(f"Error initializing managers: {e}", exc_info=True)
 
+    def _get_default_logo_dir(self, league: str) -> str:
+        """
+        Get the default logo directory for a league.
+        Matches the directories used in src/logo_downloader.py.
+        """
+        # Map leagues to their logo directories (matching logo_downloader.py)
+        logo_dir_map = {
+            'nhl': 'assets/sports/nhl_logos',
+            'ncaa_mens': 'assets/sports/ncaa_logos',  # NCAA Men's Hockey uses ncaa_logos
+            'ncaa_womens': 'assets/sports/ncaa_logos',  # NCAA Women's Hockey uses ncaa_logos
+        }
+        # Default to league-specific directory if not in map
+        return logo_dir_map.get(league, f"assets/sports/{league}_logos")
+
     def _adapt_config_for_manager(self, league: str) -> Dict[str, Any]:
         """
         Adapt plugin config format to manager expected format.
@@ -193,7 +207,7 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
                 "recent_games_to_show": league_config.get("recent_games_to_show", 5),
                 "upcoming_games_to_show": league_config.get("upcoming_games_to_show", 10),
                 "logo_dir": league_config.get(
-                    "logo_dir", f"assets/sports/{league}_logos"
+                    "logo_dir", self._get_default_logo_dir(league)
                 ),
                 "show_records": league_config.get("show_records", self.show_records),
                 "show_ranking": league_config.get("show_ranking", self.show_ranking),
