@@ -336,10 +336,10 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
         except Exception as e:
             self.logger.error(f"Error updating managers: {e}", exc_info=True)
 
-    def display(self, force_clear: bool = False) -> None:
+    def display(self, force_clear: bool = False) -> bool:
         """Display hockey games with mode cycling (like football plugin)."""
         if not self.is_enabled:
-            return
+            return False
 
         try:
             current_time = time.time()
@@ -358,12 +358,14 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
             # Get current manager and display
             current_manager = self._get_current_manager()
             if current_manager:
-                current_manager.display(force_clear)
+                return current_manager.display(force_clear)
             else:
                 self.logger.warning("No manager available for current mode")
+                return False
 
         except Exception as e:
             self.logger.error(f"Error in display method: {e}", exc_info=True)
+            return False
 
     def _get_manager_for_mode(self, mode_type: str):
         """Get the manager for a specific mode type (live, recent, upcoming)."""
