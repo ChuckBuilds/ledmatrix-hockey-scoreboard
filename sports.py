@@ -461,10 +461,28 @@ class SportsCore(ABC):
             )
 
     def _get_timezone(self):
+        timezone_name = None
+
+        # Allow plugin-specific override first
+        timezone_name = self.config.get("timezone")
+
+        if not timezone_name and self.config_manager:
+            try:
+                timezone_name = self.config_manager.get_timezone()
+            except Exception as exc:
+                self.logger.warning(
+                    f"Error retrieving timezone from ConfigManager: {exc}"
+                )
+
+        if not timezone_name:
+            timezone_name = "UTC"
+
         try:
-            timezone_str = self.config.get("timezone", "UTC")
-            return pytz.timezone(timezone_str)
+            return pytz.timezone(timezone_name)
         except pytz.UnknownTimeZoneError:
+            self.logger.warning(
+                f"Unknown timezone '{timezone_name}' - falling back to UTC"
+            )
             return pytz.utc
 
     def _should_log(self, warning_type: str, cooldown: int = 60) -> bool:

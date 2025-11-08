@@ -76,6 +76,15 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
         self.ncaa_mens_enabled = config.get("ncaa_mens", {}).get("enabled", False)
         self.ncaa_womens_enabled = config.get("ncaa_womens", {}).get("enabled", False)
 
+        # Live priority settings
+        self.nhl_live_priority = self.config.get("nhl", {}).get("live_priority", False)
+        self.ncaa_mens_live_priority = self.config.get("ncaa_mens", {}).get(
+            "live_priority", False
+        )
+        self.ncaa_womens_live_priority = self.config.get("ncaa_womens", {}).get(
+            "live_priority", False
+        )
+
         # Global settings
         self.display_duration = float(config.get("display_duration", 30))
         self.game_display_duration = float(config.get("game_display_duration", 15))
@@ -215,6 +224,7 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
                 "show_shots_on_goal": league_config.get("show_shots_on_goal", False),
                 "show_favorite_teams_only": league_config.get("favorite_teams_only", False),
                 "show_all_live": league_config.get("show_all_live", True),
+                "live_priority": league_config.get("live_priority", False),
                 "test_mode": league_config.get("test_mode", False),
                 "update_interval_seconds": league_config.get(
                     "update_interval_seconds", 60
@@ -367,6 +377,70 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
             self.logger.error(f"Error in display method: {e}", exc_info=True)
             return False
 
+    def has_live_priority(self) -> bool:
+        if not self.is_enabled:
+            return False
+
+        return any(
+            [
+                self.nhl_enabled and self.nhl_live_priority,
+                self.ncaa_mens_enabled and self.ncaa_mens_live_priority,
+                self.ncaa_womens_enabled and self.ncaa_womens_live_priority,
+            ]
+        )
+
+    def has_live_content(self) -> bool:
+        if not self.is_enabled:
+            return False
+
+        nhl_live = (
+            self.nhl_enabled
+            and self.nhl_live_priority
+            and hasattr(self, "nhl_live")
+            and bool(getattr(self.nhl_live, "live_games", []))
+        )
+        ncaa_mens_live = (
+            self.ncaa_mens_enabled
+            and self.ncaa_mens_live_priority
+            and hasattr(self, "ncaa_mens_live")
+            and bool(getattr(self.ncaa_mens_live, "live_games", []))
+        )
+        ncaa_womens_live = (
+            self.ncaa_womens_enabled
+            and self.ncaa_womens_live_priority
+            and hasattr(self, "ncaa_womens_live")
+            and bool(getattr(self.ncaa_womens_live, "live_games", []))
+        )
+
+        return nhl_live or ncaa_mens_live or ncaa_womens_live
+
+    def get_live_modes(self) -> list:
+        if not self.is_enabled:
+            return []
+
+        prioritized_modes = []
+        if self.nhl_enabled and self.nhl_live_priority and "nhl_live" in self.modes:
+            prioritized_modes.append("nhl_live")
+
+        if (
+            self.ncaa_mens_enabled
+            and self.ncaa_mens_live_priority
+            and "ncaa_mens_live" in self.modes
+        ):
+            prioritized_modes.append("ncaa_mens_live")
+
+        if (
+            self.ncaa_womens_enabled
+            and self.ncaa_womens_live_priority
+            and "ncaa_womens_live" in self.modes
+        ):
+            prioritized_modes.append("ncaa_womens_live")
+
+        if prioritized_modes:
+            return prioritized_modes
+
+        return [mode for mode in self.modes if mode.endswith("_live")]
+
     def _get_manager_for_mode(self, mode_type: str):
         """Get the manager for a specific mode type (live, recent, upcoming)."""
         # Priority: NHL > NCAA Men's > NCAA Women's
@@ -448,6 +522,13 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
                     "ncaa_womens_live": hasattr(self, "ncaa_womens_live"),
                     "ncaa_womens_recent": hasattr(self, "ncaa_womens_recent"),
                     "ncaa_womens_upcoming": hasattr(self, "ncaa_womens_upcoming"),
+                },
+                "live_priority": {
+                    "nhl": self.nhl_enabled and self.nhl_live_priority,
+                    "ncaa_mens": self.ncaa_mens_enabled
+                    and self.ncaa_mens_live_priority,
+                    "ncaa_womens": self.ncaa_womens_enabled
+                    and self.ncaa_womens_live_priority,
                 },
             }
 
