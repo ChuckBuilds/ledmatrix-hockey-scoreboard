@@ -15,12 +15,14 @@ class HockeyScoreboardRenderer:
     """Handles rendering for hockey scoreboard plugin."""
     
     def __init__(self, display_manager, logger: logging.Logger, 
-                 logo_dir: str = "assets/sports/ncaa_logos"):
+                 logo_dir: str = "assets/sports/ncaa_logos",
+                 timezone: str = "UTC"):
         """Initialize the scoreboard renderer."""
         self.display_manager = display_manager
         self.logger = logger
         self.logo_dir = Path(logo_dir)
         self._logo_cache = {}
+        self.timezone = timezone
         
         # Load fonts
         self.fonts = self._load_fonts()
@@ -321,8 +323,12 @@ class HockeyScoreboardRenderer:
                     # Parse the ISO format time
                     dt = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
                     
-                    # Convert to local time
-                    local_tz = pytz.timezone('America/New_York')  # Default to Eastern
+                    # Convert to configured timezone
+                    try:
+                        local_tz = pytz.timezone(self.timezone)
+                    except pytz.UnknownTimeZoneError:
+                        self.logger.warning(f"Unknown timezone '{self.timezone}', falling back to UTC")
+                        local_tz = pytz.utc
                     local_dt = dt.astimezone(local_tz)
                     
                     # Format date and time separately (matching SportsUpcoming)

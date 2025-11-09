@@ -239,11 +239,22 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
             }
         }
 
-        # Add global config
+        # Add global config - get timezone from cache_manager's config_manager if available
+        timezone_str = self.config.get("timezone")
+        if not timezone_str and hasattr(self.cache_manager, 'config_manager'):
+            timezone_str = self.cache_manager.config_manager.get_timezone()
+        if not timezone_str:
+            timezone_str = "UTC"
+        
+        # Get display config from main config if available
+        display_config = self.config.get("display", {})
+        if not display_config and hasattr(self.cache_manager, 'config_manager'):
+            display_config = self.cache_manager.config_manager.get_display_config()
+        
         manager_config.update(
             {
-                "timezone": self.config.get("timezone", "UTC"),
-                "display": self.config.get("display", {}),
+                "timezone": timezone_str,
+                "display": display_config,
             }
         )
 
