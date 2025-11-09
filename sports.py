@@ -164,6 +164,10 @@ class SportsCore(ABC):
             return
 
         if not self.current_game:
+            # Clear the display so old content doesn't persist
+            if force_clear:
+                self.display_manager.clear()
+                self.display_manager.update_display()
             current_time = time.time()
             if not hasattr(self, "_last_warning_time"):
                 self._last_warning_time = 0
@@ -1154,6 +1158,10 @@ class SportsUpcoming(SportsCore):
             return
 
         if not self.games_list:
+            # Clear the display so old content doesn't persist
+            if force_clear:
+                self.display_manager.clear()
+                self.display_manager.update_display()
             if self.current_game:
                 self.current_game = None  # Clear state if list empty
             current_time = time.time()
@@ -1583,8 +1591,10 @@ class SportsRecent(SportsCore):
     def display(self, force_clear=False):
         """Display recent games, handling switching."""
         if not self.is_enabled or not self.games_list:
-            # If disabled or no games, ensure display might be cleared by main loop if needed
-            # Or potentially clear it here? For now, rely on main loop/other managers.
+            # If disabled or no games, clear the display so old content doesn't persist
+            if force_clear or not self.games_list:
+                self.display_manager.clear()
+                self.display_manager.update_display()
             if not self.games_list and self.current_game:
                 self.current_game = None  # Clear internal state if list becomes empty
             return
