@@ -354,8 +354,27 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
         try:
             current_time = time.time()
 
-            # Handle mode cycling
-            if current_time - self.last_mode_switch >= self.display_duration:
+            # Check if we should stay on live mode
+            should_stay_on_live = False
+            if self.has_live_content():
+                # Get current mode name
+                current_mode = self.modes[self.current_mode_index] if self.modes else None
+                # If we're on a live mode, stay there
+                if current_mode and current_mode.endswith('_live'):
+                    should_stay_on_live = True
+                # If we're not on a live mode but have live content, switch to it
+                elif not (current_mode and current_mode.endswith('_live')):
+                    # Find the first live mode
+                    for i, mode in enumerate(self.modes):
+                        if mode.endswith('_live'):
+                            self.current_mode_index = i
+                            force_clear = True
+                            self.last_mode_switch = current_time
+                            self.logger.info(f"Live content detected - switching to display mode: {mode}")
+                            break
+
+            # Handle mode cycling only if not staying on live
+            if not should_stay_on_live and current_time - self.last_mode_switch >= self.display_duration:
                 self.current_mode_index = (self.current_mode_index + 1) % len(
                     self.modes
                 )
