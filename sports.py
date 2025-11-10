@@ -1717,32 +1717,12 @@ class SportsLive(SportsCore):
                     for game in data["events"]:
                         details = self._extract_game_details(game)
                         if details and (details["is_live"] or details["is_halftime"]):
-                            # Filter by favorite_teams_only first (takes priority over show_all_live)
-                            # If show_favorite_teams_only is true, only show favorite team games
-                            # Otherwise, show all live games
-                            should_add = False
-                            if self.show_favorite_teams_only:
-                                # Only show if it's a favorite team game
-                                is_favorite = (
-                                    details["home_abbr"] in self.favorite_teams
-                                    or details["away_abbr"] in self.favorite_teams
-                                )
-                                if is_favorite:
-                                    self.logger.info(
-                                        f"Found favorite team game: {details['away_abbr']}@{details['home_abbr']}. "
-                                        f"Favorite teams configured: {self.favorite_teams}"
-                                    )
-                                else:
-                                    self.logger.debug(
-                                        f"Skipping game {details['away_abbr']}@{details['home_abbr']} - not a favorite team game. "
-                                        f"Favorite teams: {self.favorite_teams}"
-                                    )
-                                should_add = is_favorite
-                            else:
-                                # Show all live games (show_all_live is ignored when favorite_teams_only is False)
-                                should_add = True
-                            
-                            if should_add:
+                            # Match base class logic: show_all_live OR (not favorite_teams_only) OR (is favorite)
+                            # This means:
+                            # - If show_all_live is true, show ALL live games
+                            # - If show_favorite_teams_only is false, show ALL live games  
+                            # - If show_favorite_teams_only is true AND show_all_live is false, show ONLY favorites
+                            if self.show_all_live or not self.show_favorite_teams_only or (self.show_favorite_teams_only and (details["home_abbr"] in self.favorite_teams or details["away_abbr"] in self.favorite_teams)):
                                 if self.show_odds:
                                     self._fetch_odds(details)
                                 new_live_games.append(details)
@@ -1796,11 +1776,14 @@ class SportsLive(SportsCore):
                         current_game_ids = {g["id"] for g in self.live_games}
 
                         if new_game_ids != current_game_ids:
-                            self.live_games = sorted(
-                                new_live_games,
-                                key=lambda g: g.get("start_time_utc")
-                                or datetime.now(timezone.utc),
-                            )  # Sort by start time
+                            # Sort with favorites first, then by start time
+                            def sort_key(g):
+                                is_favorite = (g["home_abbr"] in self.favorite_teams or g["away_abbr"] in self.favorite_teams)
+                                start_time = g.get("start_time_utc") or datetime.now(timezone.utc)
+                                # Favorites first (0), non-favorites second (1), then by start time
+                                return (0 if is_favorite else 1, start_time)
+                            
+                            self.live_games = sorted(new_live_games, key=sort_key)
                             # Reset index if current game is gone or list is new
                             if (
                                 not self.current_game

@@ -106,7 +106,7 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
 
         # Mode cycling (like football plugin)
         self.current_mode_index = 0
-        self.last_mode_switch = 0
+        self.last_mode_switch = time.time()
         self.modes = self._get_available_modes()
 
         # Initialize managers
@@ -202,6 +202,38 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
 
         # Extract nested configurations
         display_modes = league_config.get("display_modes", {})
+        filtering_config = league_config.get("filtering", {})
+
+        def resolve_mode_flag(*keys: str, default: bool = True) -> bool:
+            for key in keys:
+                if key in display_modes:
+                    return bool(display_modes[key])
+            return default
+
+        live_flag = resolve_mode_flag("live", "show_live", "hockey_live")
+        recent_flag = resolve_mode_flag("recent", "show_recent", "hockey_recent")
+        upcoming_flag = resolve_mode_flag("upcoming", "show_upcoming", "hockey_upcoming")
+
+        def resolve_bool(default_key: str, *extra_keys: str, default: bool = False) -> bool:
+            keys = (default_key,) + extra_keys
+            for key in keys:
+                if key in league_config:
+                    return bool(league_config[key])
+                if key in filtering_config:
+                    return bool(filtering_config[key])
+            return default
+
+        favorite_only = resolve_bool("favorite_teams_only", "show_favorite_teams_only")
+        show_all_live = resolve_bool("show_all_live")
+
+        def resolve_live_duration() -> int:
+            if "live_game_duration" in league_config:
+                return int(league_config["live_game_duration"])
+            if "game_rotation_interval_seconds" in league_config:
+                return int(league_config["game_rotation_interval_seconds"])
+            if "live_display_duration" in league_config:
+                return int(league_config["live_display_duration"])
+            return 20
 
         # Create manager config with expected structure
         manager_config = {
@@ -209,9 +241,9 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
                 "enabled": league_config.get("enabled", False),
                 "favorite_teams": league_config.get("favorite_teams", []),
                 "display_modes": {
-                    "hockey_live": display_modes.get("live", True),
-                    "hockey_recent": display_modes.get("recent", True),
-                    "hockey_upcoming": display_modes.get("upcoming", True),
+                    "hockey_live": live_flag,
+                    "hockey_recent": recent_flag,
+                    "hockey_upcoming": upcoming_flag,
                 },
                 "recent_games_to_show": league_config.get("recent_games_to_show", 5),
                 "upcoming_games_to_show": league_config.get("upcoming_games_to_show", 10),
@@ -222,15 +254,15 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
                 "show_ranking": league_config.get("show_ranking", self.show_ranking),
                 "show_odds": league_config.get("show_odds", self.show_odds),
                 "show_shots_on_goal": league_config.get("show_shots_on_goal", False),
-                "show_favorite_teams_only": league_config.get("favorite_teams_only", False),
-                "show_all_live": league_config.get("show_all_live", True),
+                "show_favorite_teams_only": favorite_only,
+                "show_all_live": show_all_live,
                 "live_priority": league_config.get("live_priority", False),
                 "test_mode": league_config.get("test_mode", False),
                 "update_interval_seconds": league_config.get(
                     "update_interval_seconds", 60
                 ),
                 "live_update_interval": league_config.get("live_update_interval", 15),
-                "live_game_duration": league_config.get("live_game_duration", 20),
+                "live_game_duration": resolve_live_duration(),
                 "background_service": {
                     "request_timeout": 30,
                     "max_retries": 3,
@@ -264,14 +296,48 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
         """Get list of available display modes based on enabled leagues (like football plugin)."""
         modes = []
 
+        def league_modes(league: str, key_prefix: str) -> Dict[str, bool]:
+            league_config = self.config.get(league, {})
+            display_modes = league_config.get("display_modes", {})
+
+            def resolve(*candidates: str) -> bool:
+                for key in candidates:
+                    if key in display_modes:
+                        return bool(display_modes[key])
+                return True
+
+            return {
+                "live": resolve("live", "show_live", f"{key_prefix}_live"),
+                "recent": resolve("recent", "show_recent", f"{key_prefix}_recent"),
+                "upcoming": resolve("upcoming", "show_upcoming", f"{key_prefix}_upcoming"),
+            }
+
         if self.nhl_enabled:
-            modes.extend(["nhl_live", "nhl_recent", "nhl_upcoming"])
+            flags = league_modes("nhl", "hockey")
+            if flags["live"]:
+                modes.append("nhl_live")
+            if flags["recent"]:
+                modes.append("nhl_recent")
+            if flags["upcoming"]:
+                modes.append("nhl_upcoming")
 
         if self.ncaa_mens_enabled:
-            modes.extend(["ncaa_mens_live", "ncaa_mens_recent", "ncaa_mens_upcoming"])
+            flags = league_modes("ncaa_mens", "hockey")
+            if flags["live"]:
+                modes.append("ncaa_mens_live")
+            if flags["recent"]:
+                modes.append("ncaa_mens_recent")
+            if flags["upcoming"]:
+                modes.append("ncaa_mens_upcoming")
 
         if self.ncaa_womens_enabled:
-            modes.extend(["ncaa_womens_live", "ncaa_womens_recent", "ncaa_womens_upcoming"])
+            flags = league_modes("ncaa_womens", "hockey")
+            if flags["live"]:
+                modes.append("ncaa_womens_live")
+            if flags["recent"]:
+                modes.append("ncaa_womens_recent")
+            if flags["upcoming"]:
+                modes.append("ncaa_womens_upcoming")
 
         # Default to NHL if no leagues enabled
         if not modes:
@@ -321,6 +387,25 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
 
         return None
 
+    def _ensure_manager_updated(self, manager) -> None:
+        """Trigger an update when the delegated manager is stale."""
+        last_update = getattr(manager, "last_update", None)
+        update_interval = getattr(manager, "update_interval", None)
+        if last_update is None or update_interval is None:
+            return
+
+        interval = update_interval
+        no_data_interval = getattr(manager, "no_data_interval", None)
+        live_games = getattr(manager, "live_games", None)
+        if no_data_interval and not live_games:
+            interval = no_data_interval
+
+        try:
+            if interval and time.time() - last_update >= interval:
+                manager.update()
+        except Exception as exc:
+            self.logger.debug(f"Auto-refresh failed for manager {manager}: {exc}")
+
     def update(self) -> None:
         """Update hockey game data."""
         if not self.is_enabled:
@@ -329,30 +414,28 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
         try:
             # Update NHL managers if enabled
             if self.nhl_enabled:
-                if hasattr(self, "nhl_live"):
-                    self.nhl_live.update()
-                if hasattr(self, "nhl_recent"):
-                    self.nhl_recent.update()
-                if hasattr(self, "nhl_upcoming"):
-                    self.nhl_upcoming.update()
+                for attr in ("nhl_live", "nhl_recent", "nhl_upcoming"):
+                    manager = getattr(self, attr, None)
+                    if manager:
+                        manager.update()
 
             # Update NCAA Men's managers if enabled
             if self.ncaa_mens_enabled:
-                if hasattr(self, "ncaa_mens_live"):
-                    self.ncaa_mens_live.update()
-                if hasattr(self, "ncaa_mens_recent"):
-                    self.ncaa_mens_recent.update()
-                if hasattr(self, "ncaa_mens_upcoming"):
-                    self.ncaa_mens_upcoming.update()
+                for attr in ("ncaa_mens_live", "ncaa_mens_recent", "ncaa_mens_upcoming"):
+                    manager = getattr(self, attr, None)
+                    if manager:
+                        manager.update()
 
             # Update NCAA Women's managers if enabled
             if self.ncaa_womens_enabled:
-                if hasattr(self, "ncaa_womens_live"):
-                    self.ncaa_womens_live.update()
-                if hasattr(self, "ncaa_womens_recent"):
-                    self.ncaa_womens_recent.update()
-                if hasattr(self, "ncaa_womens_upcoming"):
-                    self.ncaa_womens_upcoming.update()
+                for attr in (
+                    "ncaa_womens_live",
+                    "ncaa_womens_recent",
+                    "ncaa_womens_upcoming",
+                ):
+                    manager = getattr(self, attr, None)
+                    if manager:
+                        manager.update()
 
         except Exception as e:
             self.logger.error(f"Error updating managers: {e}", exc_info=True)
@@ -398,6 +481,7 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
             # Get current manager and display
             current_manager = self._get_current_manager()
             if current_manager:
+                self._ensure_manager_updated(current_manager)
                 return current_manager.display(force_clear)
             else:
                 self.logger.warning("No manager available for current mode")

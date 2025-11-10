@@ -221,7 +221,7 @@
         },
         "show_all_live": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Show all live NHL games, not just favorites"
         },
         "show_shots_on_goal": {
@@ -381,7 +381,7 @@
         },
         "show_all_live": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Show all live NCAA Men's Hockey games, not just favorites"
         },
         "show_shots_on_goal": {
@@ -541,7 +541,7 @@
         },
         "show_all_live": {
           "type": "boolean",
-          "default": true,
+          "default": false,
           "description": "Show all live NCAA Women's Hockey games, not just favorites"
         },
         "show_shots_on_goal": {
