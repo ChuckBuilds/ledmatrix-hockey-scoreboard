@@ -35,8 +35,15 @@ class SportsCore(ABC):
         # Initialize odds manager
         self.odds_manager = BaseOddsManager(self.cache_manager, self.config_manager)
         self.display_manager = display_manager
-        self.display_width = getattr(display_manager, "display_width", 128)
-        self.display_height = getattr(display_manager, "display_height", 32)
+        # Get display dimensions from matrix (same as base SportsCore class)
+        # This ensures proper scaling for different display sizes
+        if hasattr(display_manager, 'matrix') and display_manager.matrix is not None:
+            self.display_width = display_manager.matrix.width
+            self.display_height = display_manager.matrix.height
+        else:
+            # Fallback to width/height properties (which also check matrix)
+            self.display_width = getattr(display_manager, "width", 128)
+            self.display_height = getattr(display_manager, "height", 32)
 
         self.sport_key = sport_key
         self.sport = None
@@ -856,35 +863,48 @@ class SportsUpcoming(SportsCore):
 
             # Filter for favorite teams only if the config is set
             if self.show_favorite_teams_only:
-                # Select one game per favorite team (earliest upcoming game for each team)
+                # Select N games per favorite team (where N = upcoming_games_to_show)
+                # Example: upcoming_games_to_show=2 with 3 favorite teams = 6 games total
                 team_games = []
                 for team in self.favorite_teams:
                     # Find games where this team is playing
-                    if team_specific_games := [
+                    team_specific_games = [
                         game
                         for game in processed_games
                         if game["home_abbr"] == team or game["away_abbr"] == team
-                    ]:
-                        # Sort by game time and take the earliest
+                    ]
+                    if team_specific_games:
+                        # Sort by game time and take the earliest N games
                         team_specific_games.sort(
                             key=lambda g: g.get("start_time_utc")
                             or datetime.max.replace(tzinfo=timezone.utc)
                         )
-                        team_games.append(team_specific_games[0])
+                        # Take up to upcoming_games_to_show games for this team
+                        team_games.extend(team_specific_games[: self.upcoming_games_to_show])
 
-                # Sort the final list by game time
+                # Sort the final list by game time (earliest first)
                 team_games.sort(
                     key=lambda g: g.get("start_time_utc")
                     or datetime.max.replace(tzinfo=timezone.utc)
                 )
+                # Remove duplicates (in case a game involves multiple favorite teams)
+                seen_ids = set()
+                unique_team_games = []
+                for game in team_games:
+                    if game["id"] not in seen_ids:
+                        seen_ids.add(game["id"])
+                        unique_team_games.append(game)
+                team_games = unique_team_games
             else:
-                team_games = processed_games  # Show all upcoming if no favorites
+                # No favorite teams: apply total limit (not per-team)
+                # Example: upcoming_games_to_show=1 shows the next 1 game total (earliest)
+                team_games = processed_games
                 # Sort by game time, earliest first
                 team_games.sort(
                     key=lambda g: g.get("start_time_utc")
                     or datetime.max.replace(tzinfo=timezone.utc)
                 )
-                # Limit to the specified number of upcoming games
+                # Limit to the specified number of upcoming games (total, not per-team)
                 team_games = team_games[: self.upcoming_games_to_show]
 
             # Log changes or periodically
@@ -1303,7 +1323,8 @@ class SportsRecent(SportsCore):
                         f"Found {len(favorite_team_games)} favorite team games out of {len(processed_games)} total final games within last 21 days"
                     )
 
-                    # Select one game per favorite team (most recent game for each team)
+                    # Select N games per favorite team (where N = recent_games_to_show)
+                    # Example: recent_games_to_show=1 with 2 favorite teams = 2 games total
                     team_games = []
                     for team in self.favorite_teams:
                         # Find games where this team is playing
@@ -1314,13 +1335,14 @@ class SportsRecent(SportsCore):
                         ]
 
                         if team_specific_games:
-                            # Sort by game time and take the most recent
+                            # Sort by game time and take the most recent N games
                             team_specific_games.sort(
                                 key=lambda g: g.get("start_time_utc")
                                 or datetime.min.replace(tzinfo=timezone.utc),
                                 reverse=True,
                             )
-                            team_games.append(team_specific_games[0])
+                            # Take up to recent_games_to_show games for this team
+                            team_games.extend(team_specific_games[: self.recent_games_to_show])
 
                     # Sort the final list by game time (most recent first)
                     team_games.sort(
@@ -1328,6 +1350,14 @@ class SportsRecent(SportsCore):
                         or datetime.min.replace(tzinfo=timezone.utc),
                         reverse=True,
                     )
+                    # Remove duplicates (in case a game involves multiple favorite teams)
+                    seen_ids = set()
+                    unique_team_games = []
+                    for game in team_games:
+                        if game["id"] not in seen_ids:
+                            seen_ids.add(game["id"])
+                            unique_team_games.append(game)
+                    team_games = unique_team_games
 
                     # Debug: Show which games are selected for display
                     for i, game in enumerate(team_games):
@@ -1335,11 +1365,11 @@ class SportsRecent(SportsCore):
                             f"Game {i+1} for display: {game['away_abbr']} @ {game['home_abbr']} - {game.get('start_time_utc')} - Score: {game['away_score']}-{game['home_score']}"
                         )
             else:
-                team_games = (
-                    processed_games  # Show all recent games if favorite_teams_only is disabled
-                )
+                # No favorite teams: apply total limit (not per-team)
+                # Example: recent_games_to_show=5 shows the 5 most recent games total
+                team_games = processed_games
                 self.logger.info(
-                    f"Found {len(processed_games)} total final games within last 21 days (show_favorite_teams_only is disabled)"
+                    f"Found {len(processed_games)} total final games within last 21 days (no favorite teams configured)"
                 )
                 # Sort by game time, most recent first
                 team_games.sort(
@@ -1347,7 +1377,7 @@ class SportsRecent(SportsCore):
                     or datetime.min.replace(tzinfo=timezone.utc),
                     reverse=True,
                 )
-                # Limit to the specified number of recent games
+                # Limit to the specified number of recent games (total, not per-team)
                 team_games = team_games[: self.recent_games_to_show]
 
             # Check if the list of games to display has changed
