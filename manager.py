@@ -7,7 +7,7 @@ the proven, working manager classes from the LEDMatrix core project.
 
 import logging
 import time
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 try:
     from src.plugin_system.base_plugin import BasePlugin
@@ -68,13 +68,24 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
 
         # Basic configuration
         self.is_enabled = config.get("enabled", True)
-        self.display_width = getattr(display_manager, "display_width", 128)
-        self.display_height = getattr(display_manager, "display_height", 32)
+        # Get display dimensions from display_manager properties
+        if hasattr(display_manager, 'matrix') and display_manager.matrix is not None:
+            self.display_width = display_manager.matrix.width
+            self.display_height = display_manager.matrix.height
+        else:
+            self.display_width = getattr(display_manager, "width", 128)
+            self.display_height = getattr(display_manager, "height", 32)
 
-        # League configurations
+        # League configurations (defaults come from schema via plugin_manager merge)
+        # Debug: Log what config we received
+        self.logger.debug(f"Hockey plugin received config keys: {list(config.keys())}")
+        self.logger.debug(f"NHL config: {config.get('nhl', {})}")
+        
         self.nhl_enabled = config.get("nhl", {}).get("enabled", False)
         self.ncaa_mens_enabled = config.get("ncaa_mens", {}).get("enabled", False)
         self.ncaa_womens_enabled = config.get("ncaa_womens", {}).get("enabled", False)
+        
+        self.logger.info(f"League enabled states - NHL: {self.nhl_enabled}, NCAA Men's: {self.ncaa_mens_enabled}, NCAA Women's: {self.ncaa_womens_enabled}")
 
         # Live priority settings
         self.nhl_live_priority = self.config.get("nhl", {}).get("live_priority", False)
@@ -108,6 +119,10 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
         self.current_mode_index = 0
         self.last_mode_switch = time.time()
         self.modes = self._get_available_modes()
+
+        # Track current display context for granular dynamic duration
+        self._current_display_league: Optional[str] = None  # 'nhl', 'ncaa_mens', or 'ncaa_womens'
+        self._current_display_mode_type: Optional[str] = None  # 'live', 'recent', 'upcoming'
 
         # Initialize managers
         self._initialize_managers()
@@ -440,7 +455,7 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
         except Exception as e:
             self.logger.error(f"Error updating managers: {e}", exc_info=True)
 
-    def display(self, force_clear: bool = False) -> bool:
+    def display(self, force_clear: bool = False, display_mode: Optional[str] = None) -> bool:
         """Display hockey games with mode cycling (like football plugin)."""
         if not self.is_enabled:
             return False
@@ -448,48 +463,218 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
         try:
             current_time = time.time()
 
-            # Check if we should stay on live mode
-            should_stay_on_live = False
-            if self.has_live_content():
-                # Get current mode name
-                current_mode = self.modes[self.current_mode_index] if self.modes else None
-                # If we're on a live mode, stay there
-                if current_mode and current_mode.endswith('_live'):
-                    should_stay_on_live = True
-                # If we're not on a live mode but have live content, switch to it
-                elif not (current_mode and current_mode.endswith('_live')):
-                    # Find the first live mode
-                    for i, mode in enumerate(self.modes):
-                        if mode.endswith('_live'):
-                            self.current_mode_index = i
-                            force_clear = True
-                            self.last_mode_switch = current_time
-                            self.logger.info(f"Live content detected - switching to display mode: {mode}")
-                            break
-
-            # Handle mode cycling only if not staying on live
-            if not should_stay_on_live and current_time - self.last_mode_switch >= self.display_duration:
-                self.current_mode_index = (self.current_mode_index + 1) % len(
-                    self.modes
-                )
-                self.last_mode_switch = current_time
-                force_clear = True
-
-                current_mode = self.modes[self.current_mode_index]
-                self.logger.info(f"Switching to display mode: {current_mode}")
-
-            # Get current manager and display
-            current_manager = self._get_current_manager()
-            if current_manager:
-                self._ensure_manager_updated(current_manager)
-                return current_manager.display(force_clear)
+            # If display_mode is provided, use it to determine which manager to call
+            if display_mode:
+                # Parse display_mode (e.g., "nhl_live", "ncaa_mens_recent", "ncaa_womens_upcoming")
+                parts = display_mode.split("_", 1)
+                if len(parts) == 2:
+                    league_prefix, mode_type = parts
+                    # Map league prefixes to league names
+                    league_map = {
+                        "nhl": "nhl",
+                        "ncaa": "ncaa_mens",  # Default to mens if just "ncaa"
+                    }
+                    # Handle ncaa_mens and ncaa_womens explicitly
+                    if display_mode.startswith("ncaa_mens_"):
+                        league = "ncaa_mens"
+                        mode_type = display_mode.replace("ncaa_mens_", "")
+                    elif display_mode.startswith("ncaa_womens_"):
+                        league = "ncaa_womens"
+                        mode_type = display_mode.replace("ncaa_womens_", "")
+                    else:
+                        league = league_map.get(league_prefix, "nhl")
+                    
+                    # Track which league/mode we're displaying for granular dynamic duration
+                    self._current_display_league = league
+                    self._current_display_mode_type = mode_type
+                    
+                    # Get the appropriate manager
+                    managers_to_try = []
+                    if league == "nhl" and self.nhl_enabled:
+                        if mode_type == "live":
+                            managers_to_try.append(self.nhl_live)
+                        elif mode_type == "recent":
+                            managers_to_try.append(self.nhl_recent)
+                        elif mode_type == "upcoming":
+                            managers_to_try.append(self.nhl_upcoming)
+                    elif league == "ncaa_mens" and self.ncaa_mens_enabled:
+                        if mode_type == "live":
+                            managers_to_try.append(self.ncaa_mens_live)
+                        elif mode_type == "recent":
+                            managers_to_try.append(self.ncaa_mens_recent)
+                        elif mode_type == "upcoming":
+                            managers_to_try.append(self.ncaa_mens_upcoming)
+                    elif league == "ncaa_womens" and self.ncaa_womens_enabled:
+                        if mode_type == "live":
+                            managers_to_try.append(self.ncaa_womens_live)
+                        elif mode_type == "recent":
+                            managers_to_try.append(self.ncaa_womens_recent)
+                        elif mode_type == "upcoming":
+                            managers_to_try.append(self.ncaa_womens_upcoming)
+                    
+                    for current_manager in managers_to_try:
+                        if current_manager:
+                            self._ensure_manager_updated(current_manager)
+                            return current_manager.display(force_clear)
+                    
+                    return False
             else:
-                self.logger.warning("No manager available for current mode")
-                return False
+                # Fall back to internal mode cycling
+                # Check if we should stay on live mode
+                should_stay_on_live = False
+                if self.has_live_content():
+                    # Get current mode name
+                    current_mode = self.modes[self.current_mode_index] if self.modes else None
+                    # If we're on a live mode, stay there
+                    if current_mode and current_mode.endswith('_live'):
+                        should_stay_on_live = True
+                    # If we're not on a live mode but have live content, switch to it
+                    elif not (current_mode and current_mode.endswith('_live')):
+                        # Find the first live mode
+                        for i, mode in enumerate(self.modes):
+                            if mode.endswith('_live'):
+                                self.current_mode_index = i
+                                force_clear = True
+                                self.last_mode_switch = current_time
+                                self.logger.info(f"Live content detected - switching to display mode: {mode}")
+                                break
+
+                # Handle mode cycling only if not staying on live
+                if not should_stay_on_live and current_time - self.last_mode_switch >= self.display_duration:
+                    self.current_mode_index = (self.current_mode_index + 1) % len(
+                        self.modes
+                    )
+                    self.last_mode_switch = current_time
+                    force_clear = True
+
+                    current_mode = self.modes[self.current_mode_index]
+                    self.logger.info(f"Switching to display mode: {current_mode}")
+
+                # Get current manager and display
+                current_manager = self._get_current_manager()
+                if current_manager:
+                    # Track which league/mode we're displaying for granular dynamic duration
+                    current_mode = self.modes[self.current_mode_index] if self.modes else None
+                    if current_mode:
+                        if current_mode.startswith("nhl_"):
+                            self._current_display_league = 'nhl'
+                            self._current_display_mode_type = current_mode.split("_", 1)[1]
+                        elif current_mode.startswith("ncaa_mens_"):
+                            self._current_display_league = 'ncaa_mens'
+                            self._current_display_mode_type = current_mode.split("_", 2)[2]
+                        elif current_mode.startswith("ncaa_womens_"):
+                            self._current_display_league = 'ncaa_womens'
+                            self._current_display_mode_type = current_mode.split("_", 2)[2]
+                    
+                    self._ensure_manager_updated(current_manager)
+                    return current_manager.display(force_clear)
+                else:
+                    self.logger.warning("No manager available for current mode")
+                    return False
 
         except Exception as e:
             self.logger.error(f"Error in display method: {e}", exc_info=True)
             return False
+
+    def supports_dynamic_duration(self) -> bool:
+        """
+        Check if dynamic duration is enabled for the current display context.
+        Checks granular settings: per-league/per-mode > per-mode > per-league > global.
+        """
+        if not self.is_enabled:
+            return False
+        
+        # If no current display context, check global setting
+        if not self._current_display_league or not self._current_display_mode_type:
+            return super().supports_dynamic_duration() if hasattr(super(), 'supports_dynamic_duration') else False
+        
+        league = self._current_display_league
+        mode_type = self._current_display_mode_type
+        
+        # Check per-league/per-mode setting first (most specific)
+        league_config = self.config.get(league, {})
+        league_dynamic = league_config.get("dynamic_duration", {})
+        league_modes = league_dynamic.get("modes", {})
+        mode_config = league_modes.get(mode_type, {})
+        if "enabled" in mode_config:
+            return bool(mode_config.get("enabled", False))
+        
+        # Check per-league setting
+        if "enabled" in league_dynamic:
+            return bool(league_dynamic.get("enabled", False))
+        
+        # Check global per-mode setting
+        global_dynamic = self.config.get("dynamic_duration", {})
+        global_modes = global_dynamic.get("modes", {})
+        global_mode_config = global_modes.get(mode_type, {})
+        if "enabled" in global_mode_config:
+            return bool(global_mode_config.get("enabled", False))
+        
+        # Fall back to global setting
+        return bool(global_dynamic.get("enabled", False))
+    
+    def get_dynamic_duration_cap(self) -> Optional[float]:
+        """
+        Get dynamic duration cap for the current display context.
+        Checks granular settings: per-league/per-mode > per-mode > per-league > global.
+        """
+        if not self.is_enabled:
+            return None
+        
+        # If no current display context, check global setting
+        if not self._current_display_league or not self._current_display_mode_type:
+            if hasattr(super(), 'get_dynamic_duration_cap'):
+                return super().get_dynamic_duration_cap()
+            global_dynamic = self.config.get("dynamic_duration", {})
+            try:
+                cap = float(global_dynamic.get("max_duration_seconds", 300))
+                return cap if cap > 0 else None
+            except (TypeError, ValueError):
+                return None
+        
+        league = self._current_display_league
+        mode_type = self._current_display_mode_type
+        
+        # Check per-league/per-mode setting first (most specific)
+        league_config = self.config.get(league, {})
+        league_dynamic = league_config.get("dynamic_duration", {})
+        league_modes = league_dynamic.get("modes", {})
+        mode_config = league_modes.get(mode_type, {})
+        if "max_duration_seconds" in mode_config:
+            try:
+                cap = float(mode_config.get("max_duration_seconds"))
+                if cap > 0:
+                    return cap
+            except (TypeError, ValueError):
+                pass
+        
+        # Check per-league setting
+        if "max_duration_seconds" in league_dynamic:
+            try:
+                cap = float(league_dynamic.get("max_duration_seconds"))
+                if cap > 0:
+                    return cap
+            except (TypeError, ValueError):
+                pass
+        
+        # Check global per-mode setting
+        global_dynamic = self.config.get("dynamic_duration", {})
+        global_modes = global_dynamic.get("modes", {})
+        global_mode_config = global_modes.get(mode_type, {})
+        if "max_duration_seconds" in global_mode_config:
+            try:
+                cap = float(global_mode_config.get("max_duration_seconds"))
+                if cap > 0:
+                    return cap
+            except (TypeError, ValueError):
+                pass
+        
+        # Fall back to global setting
+        try:
+            cap = float(global_dynamic.get("max_duration_seconds", 300))
+            return cap if cap > 0 else None
+        except (TypeError, ValueError):
+            return None
 
     def has_live_priority(self) -> bool:
         if not self.is_enabled:
@@ -600,7 +785,7 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
             self.logger.error(f"Error validating config: {e}")
             return False
 
-    def get_duration(self) -> float:
+    def get_display_duration(self) -> float:
         """Get the display duration for this plugin."""
         return float(self.display_duration)
 
