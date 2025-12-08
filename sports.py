@@ -58,10 +58,10 @@ class SportsCore(ABC):
         )  # Changed config key
         self.is_enabled: bool = self.mode_config.get("enabled", False)
         self.show_odds: bool = self.mode_config.get("show_odds", False)
-        self.test_mode: bool = self.mode_config.get("test_mode", False)
-        self.logo_dir = Path(
-            self.mode_config.get("logo_dir", "assets/sports/ncaa_logos")
-        )  # Changed logo dir
+        # Use LogoDownloader to get the correct default logo directory for this sport
+        from src.logo_downloader import LogoDownloader
+        default_logo_dir = Path(LogoDownloader().get_logo_directory(sport_key))
+        self.logo_dir = default_logo_dir
         self.update_interval: int = self.mode_config.get("update_interval_seconds", 60)
         self.show_records: bool = self.mode_config.get("show_records", False)
         self.show_ranking: bool = self.mode_config.get("show_ranking", False)
@@ -1695,10 +1695,6 @@ class SportsLive(SportsCore):
         self.last_count_log_time = 0  # Track when we last logged count data
         self.count_log_interval = 5  # Only log count data every 5 seconds
 
-    @abstractmethod
-    def _test_mode_update(self) -> None:
-        return
-
     def update(self):
         """Update live game data and handle game switching."""
         if not self.is_enabled:
@@ -1709,12 +1705,9 @@ class SportsLive(SportsCore):
         current_time = time.time()
 
         # Define interval using a pattern similar to NFLLiveManager's update method.
-        # Uses getattr for robustness, assuming attributes for live_games, test_mode,
+        # Uses getattr for robustness, assuming attributes for live_games,
         # no_data_interval, and update_interval are available on self.
         _live_games_attr = self.live_games
-        _test_mode_attr = (
-            self.test_mode
-        )  # test_mode is often from a base class or config
         _no_data_interval_attr = (
             self.no_data_interval
         )  # Default similar to NFLLiveManager
@@ -1724,7 +1717,7 @@ class SportsLive(SportsCore):
 
         interval = (
             _no_data_interval_attr
-            if not _live_games_attr and not _test_mode_attr
+            if not _live_games_attr
             else _update_interval_attr
         )
 
@@ -1736,11 +1729,7 @@ class SportsLive(SportsCore):
             if self.show_ranking:
                 self._fetch_team_rankings()
 
-            if self.test_mode:
-                # Simulate clock running down in test mode
-                self._test_mode_update()
-            else:
-                # Fetch live game data
+            # Fetch live game data
                 data = self._fetch_data()
                 new_live_games = []
                 if data and "events" in data:
@@ -1879,7 +1868,7 @@ class SportsLive(SportsCore):
 
             # Handle game switching (outside test mode check)
             if (
-                not self.test_mode
+True
                 and len(self.live_games) > 1
                 and (current_time - self.last_game_switch) >= self.game_display_duration
             ):

@@ -38,8 +38,10 @@ class SportsCore(ABC):
         self.mode_config = config.get(f"{sport_key}_scoreboard", {})
         self.is_enabled: bool = self.mode_config.get("enabled", False)
         self.show_odds: bool = self.mode_config.get("show_odds", False)
-        self.test_mode: bool = self.mode_config.get("test_mode", False)
-        self.logo_dir = Path(self.mode_config.get("logo_dir", "assets/sports/ncaa_logos"))
+        # Use LogoDownloader to get the correct default logo directory for this sport
+        from src.logo_downloader import LogoDownloader
+        default_logo_dir = Path(LogoDownloader().get_logo_directory(sport_key))
+        self.logo_dir = default_logo_dir
         self.update_interval: int = self.mode_config.get("update_interval_seconds", 60)
         self.show_records: bool = self.mode_config.get('show_records', False)
         self.show_ranking: bool = self.mode_config.get('show_ranking', False)

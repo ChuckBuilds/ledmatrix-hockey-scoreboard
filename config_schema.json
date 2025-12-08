@@ -26,11 +26,6 @@
       "default": false,
       "description": "Show team rankings (when available)"
     },
-    "live_priority": {
-      "type": "boolean",
-      "default": true,
-      "description": "Enable live priority takeover when plugin has live content"
-    },
     "live_game_duration": {
       "type": "number",
       "default": 20,
@@ -42,11 +37,6 @@
       "type": "boolean",
       "default": true,
       "description": "Show betting odds for games"
-    },
-    "test_mode": {
-      "type": "boolean",
-      "default": false,
-      "description": "Enable test mode for development"
     },
     "update_interval": {
       "type": "integer",
@@ -111,80 +101,6 @@
       "maximum": 20,
       "description": "With favorite teams: Number of upcoming games PER team (e.g., 2 with 3 teams = up to 6 games). Without favorite teams: Total number of next upcoming games to show (e.g., 1 = show only the next 1 game total)."
     },
-    "dynamic_duration": {
-      "type": "object",
-      "title": "Dynamic Duration Settings",
-      "description": "Control whether the plugin shows all games before moving to the next mode. Can be configured globally or per-league/per-mode for granular control.",
-      "properties": {
-        "enabled": {
-          "type": "boolean",
-          "default": false,
-          "description": "Global enable for dynamic duration. When enabled, the plugin will show each game once before moving to the next mode, overriding the normal display_duration setting. Can be overridden by per-league or per-mode settings."
-        },
-        "max_duration_seconds": {
-          "type": "number",
-          "default": 300,
-          "minimum": 60,
-          "maximum": 600,
-          "description": "Global maximum time in seconds to wait for all games to be displayed. Can be overridden by per-league settings."
-        },
-        "modes": {
-          "type": "object",
-          "title": "Per-Mode Settings",
-          "description": "Configure dynamic duration for specific modes (live, recent, upcoming). These override global settings.",
-          "properties": {
-            "live": {
-              "type": "object",
-              "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "default": false,
-                  "description": "Enable dynamic duration for live games"
-                },
-                "max_duration_seconds": {
-                  "type": "number",
-                  "minimum": 60,
-                  "maximum": 600,
-                  "description": "Max duration for live games (overrides global)"
-                }
-              }
-            },
-            "recent": {
-              "type": "object",
-              "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "default": false,
-                  "description": "Enable dynamic duration for recent games"
-                },
-                "max_duration_seconds": {
-                  "type": "number",
-                  "minimum": 60,
-                  "maximum": 600,
-                  "description": "Max duration for recent games (overrides global)"
-                }
-              }
-            },
-            "upcoming": {
-              "type": "object",
-              "properties": {
-                "enabled": {
-                  "type": "boolean",
-                  "default": false,
-                  "description": "Enable dynamic duration for upcoming games"
-                },
-                "max_duration_seconds": {
-                  "type": "number",
-                  "minimum": 60,
-                  "maximum": 600,
-                  "description": "Max duration for upcoming games (overrides global)"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "show_all_live": {
       "type": "boolean",
       "default": false,
@@ -244,11 +160,6 @@
           "minimum": 1,
           "maximum": 50,
           "description": "With favorite teams: Number of upcoming games PER team (e.g., 2 with 3 teams = up to 6 games). Without favorite teams: Total number of next upcoming games to show (e.g., 1 = show only the next 1 game total)."
-        },
-        "logo_dir": {
-          "type": "string",
-          "default": "assets/sports/nhl_logos",
-          "description": "Directory for NHL team logos"
         },
         "update_interval_seconds": {
           "type": "number",
@@ -356,18 +267,18 @@
         "dynamic_duration": {
           "type": "object",
           "title": "NHL Dynamic Duration Settings",
-          "description": "Override global dynamic duration settings for NHL games. If not set, uses global settings.",
+          "description": "Configure dynamic duration settings for NHL games.",
           "properties": {
             "enabled": {
               "type": "boolean",
               "default": false,
-              "description": "Enable dynamic duration for NHL games (overrides global setting)"
+              "description": "Enable dynamic duration for NHL games"
             },
             "max_duration_seconds": {
               "type": "number",
               "minimum": 60,
               "maximum": 600,
-              "description": "Max duration for NHL games (overrides global setting)"
+                  "description": "Max duration for NHL games"
             },
             "modes": {
               "type": "object",
@@ -477,11 +388,6 @@
           "minimum": 1,
           "maximum": 50,
           "description": "With favorite teams: Number of upcoming games PER team (e.g., 2 with 3 teams = up to 6 games). Without favorite teams: Total number of next upcoming games to show (e.g., 1 = show only the next 1 game total)."
-        },
-        "logo_dir": {
-          "type": "string",
-          "default": "assets/sports/ncaa_logos",
-          "description": "Directory for NCAA Men's Hockey team logos"
         },
         "update_interval_seconds": {
           "type": "number",
@@ -710,11 +616,6 @@
           "minimum": 1,
           "maximum": 50,
           "description": "With favorite teams: Number of upcoming games PER team (e.g., 2 with 3 teams = up to 6 games). Without favorite teams: Total number of next upcoming games to show (e.g., 1 = show only the next 1 game total)."
-        },
-        "logo_dir": {
-          "type": "string",
-          "default": "assets/sports/ncaa_logos",
-          "description": "Directory for NCAA Women's Hockey team logos"
         },
         "update_interval_seconds": {
           "type": "number",

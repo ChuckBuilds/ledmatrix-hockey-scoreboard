@@ -262,9 +262,6 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
                 },
                 "recent_games_to_show": league_config.get("recent_games_to_show", 5),
                 "upcoming_games_to_show": league_config.get("upcoming_games_to_show", 10),
-                "logo_dir": league_config.get(
-                    "logo_dir", self._get_default_logo_dir(league)
-                ),
                 "show_records": league_config.get("show_records", self.show_records),
                 "show_ranking": league_config.get("show_ranking", self.show_ranking),
                 "show_odds": league_config.get("show_odds", self.show_odds),
@@ -272,7 +269,6 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
                 "show_favorite_teams_only": favorite_only,
                 "show_all_live": show_all_live,
                 "live_priority": league_config.get("live_priority", False),
-                "test_mode": league_config.get("test_mode", False),
                 "update_interval_seconds": league_config.get(
                     "update_interval_seconds", 60
                 ),
@@ -584,9 +580,9 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
         if not self.is_enabled:
             return False
         
-        # If no current display context, check global setting
+        # If no current display context, return False (no global fallback)
         if not self._current_display_league or not self._current_display_mode_type:
-            return super().supports_dynamic_duration() if hasattr(super(), 'supports_dynamic_duration') else False
+            return False
         
         league = self._current_display_league
         mode_type = self._current_display_mode_type
@@ -603,15 +599,8 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
         if "enabled" in league_dynamic:
             return bool(league_dynamic.get("enabled", False))
         
-        # Check global per-mode setting
-        global_dynamic = self.config.get("dynamic_duration", {})
-        global_modes = global_dynamic.get("modes", {})
-        global_mode_config = global_modes.get(mode_type, {})
-        if "enabled" in global_mode_config:
-            return bool(global_mode_config.get("enabled", False))
-        
-        # Fall back to global setting
-        return bool(global_dynamic.get("enabled", False))
+        # No global fallback - return False
+        return False
     
     def get_dynamic_duration_cap(self) -> Optional[float]:
         """
@@ -621,16 +610,9 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
         if not self.is_enabled:
             return None
         
-        # If no current display context, check global setting
+        # If no current display context, return None (no global fallback)
         if not self._current_display_league or not self._current_display_mode_type:
-            if hasattr(super(), 'get_dynamic_duration_cap'):
-                return super().get_dynamic_duration_cap()
-            global_dynamic = self.config.get("dynamic_duration", {})
-            try:
-                cap = float(global_dynamic.get("max_duration_seconds", 300))
-                return cap if cap > 0 else None
-            except (TypeError, ValueError):
-                return None
+            return None
         
         league = self._current_display_league
         mode_type = self._current_display_mode_type
@@ -657,24 +639,8 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
             except (TypeError, ValueError):
                 pass
         
-        # Check global per-mode setting
-        global_dynamic = self.config.get("dynamic_duration", {})
-        global_modes = global_dynamic.get("modes", {})
-        global_mode_config = global_modes.get(mode_type, {})
-        if "max_duration_seconds" in global_mode_config:
-            try:
-                cap = float(global_mode_config.get("max_duration_seconds"))
-                if cap > 0:
-                    return cap
-            except (TypeError, ValueError):
-                pass
-        
-        # Fall back to global setting
-        try:
-            cap = float(global_dynamic.get("max_duration_seconds", 300))
-            return cap if cap > 0 else None
-        except (TypeError, ValueError):
-            return None
+        # No global fallback - return None
+        return None
 
     def has_live_priority(self) -> bool:
         if not self.is_enabled:
