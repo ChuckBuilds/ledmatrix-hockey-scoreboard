@@ -422,6 +422,12 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
         if not self.is_enabled:
             return
 
+        current_time = time.time()
+        # Log plugin update calls for debugging (every 5 minutes)
+        if not hasattr(self, '_last_plugin_update_log') or current_time - self._last_plugin_update_log >= 300:
+            self.logger.info(f"Plugin update() called at {current_time}")
+            self._last_plugin_update_log = current_time
+
         try:
             # Update NHL managers if enabled
             if self.nhl_enabled:

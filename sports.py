@@ -1684,6 +1684,12 @@ class SportsLive(SportsCore):
         super().__init__(config, display_manager, cache_manager, logger, sport_key)
         self.update_interval = self.mode_config.get("live_update_interval", 15)
         self.no_data_interval = 300
+        # Log the configured interval for debugging
+        self.logger.info(
+            f"SportsLive initialized: live_update_interval={self.update_interval}s, "
+            f"no_data_interval={self.no_data_interval}s, "
+            f"mode_config keys={list(self.mode_config.keys())}"
+        )
         self.last_update = 0
         self.live_games = []
         self.current_game_index = 0
@@ -1715,11 +1721,32 @@ class SportsLive(SportsCore):
             self.update_interval
         )  # Default similar to NFLLiveManager
 
-        interval = (
-            _no_data_interval_attr
-            if not _live_games_attr
-            else _update_interval_attr
-        )
+        # For live managers, always use the configured live_update_interval when checking for updates.
+        # Only use no_data_interval if we've recently checked and confirmed there are no live games.
+        # This ensures we check for live games frequently even if the list is temporarily empty.
+        # Only use no_data_interval if we have no live games AND we've checked recently (within last 5 minutes)
+        time_since_last_update = current_time - self.last_update
+        has_recently_checked = self.last_update > 0 and time_since_last_update < 300
+        
+        if _live_games_attr:
+            # We have live games, use the configured update interval
+            interval = _update_interval_attr
+        elif has_recently_checked:
+            # We've checked recently and found no live games, use longer interval
+            interval = _no_data_interval_attr
+        else:
+            # First check or haven't checked in a while, use update interval to check for live games
+            interval = _update_interval_attr
+
+        # Debug logging for interval selection (log every 5 minutes or when interval changes)
+        if current_time - self.last_log_time >= 300:  # Log every 5 minutes
+            self.logger.info(
+                f"Update check: live_games={len(_live_games_attr) if _live_games_attr else 0}, "
+                f"update_interval={_update_interval_attr}, no_data_interval={_no_data_interval_attr}, "
+                f"selected_interval={interval}, time_since_last_update={time_since_last_update:.1f}s, "
+                f"has_recently_checked={has_recently_checked}"
+            )
+            self.last_log_time = current_time
 
         # Original line from traceback (line 455), now with variables defined:
         if current_time - self.last_update >= interval:
