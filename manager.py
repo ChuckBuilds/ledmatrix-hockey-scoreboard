@@ -144,42 +144,72 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
 
             # Initialize NHL managers if enabled
             if self.nhl_enabled:
-                self.nhl_live = NHLLiveManager(
-                    nhl_config, self.display_manager, self.cache_manager
-                )
-                self.nhl_recent = NHLRecentManager(
-                    nhl_config, self.display_manager, self.cache_manager
-                )
-                self.nhl_upcoming = NHLUpcomingManager(
-                    nhl_config, self.display_manager, self.cache_manager
-                )
-                self.logger.info("NHL managers initialized")
+                try:
+                    self.nhl_live = NHLLiveManager(
+                        nhl_config, self.display_manager, self.cache_manager
+                    )
+                    self.nhl_recent = NHLRecentManager(
+                        nhl_config, self.display_manager, self.cache_manager
+                    )
+                    self.nhl_upcoming = NHLUpcomingManager(
+                        nhl_config, self.display_manager, self.cache_manager
+                    )
+                    self.logger.info("NHL managers initialized")
+                except Exception as e:
+                    self.logger.error(f"Failed to initialize NHL managers: {e}", exc_info=True)
+                    # Set to None so hasattr checks work correctly
+                    if not hasattr(self, "nhl_live"):
+                        self.nhl_live = None
+                    if not hasattr(self, "nhl_recent"):
+                        self.nhl_recent = None
+                    if not hasattr(self, "nhl_upcoming"):
+                        self.nhl_upcoming = None
 
             # Initialize NCAA Men's managers if enabled
             if self.ncaa_mens_enabled:
-                self.ncaa_mens_live = NCAAMHockeyLiveManager(
-                    ncaa_mens_config, self.display_manager, self.cache_manager
-                )
-                self.ncaa_mens_recent = NCAAMHockeyRecentManager(
-                    ncaa_mens_config, self.display_manager, self.cache_manager
-                )
-                self.ncaa_mens_upcoming = NCAAMHockeyUpcomingManager(
-                    ncaa_mens_config, self.display_manager, self.cache_manager
-                )
-                self.logger.info("NCAA Men's Hockey managers initialized")
+                try:
+                    self.ncaa_mens_live = NCAAMHockeyLiveManager(
+                        ncaa_mens_config, self.display_manager, self.cache_manager
+                    )
+                    self.ncaa_mens_recent = NCAAMHockeyRecentManager(
+                        ncaa_mens_config, self.display_manager, self.cache_manager
+                    )
+                    self.ncaa_mens_upcoming = NCAAMHockeyUpcomingManager(
+                        ncaa_mens_config, self.display_manager, self.cache_manager
+                    )
+                    self.logger.info("NCAA Men's Hockey managers initialized")
+                except Exception as e:
+                    self.logger.error(f"Failed to initialize NCAA Men's Hockey managers: {e}", exc_info=True)
+                    # Set to None so hasattr checks work correctly
+                    if not hasattr(self, "ncaa_mens_live"):
+                        self.ncaa_mens_live = None
+                    if not hasattr(self, "ncaa_mens_recent"):
+                        self.ncaa_mens_recent = None
+                    if not hasattr(self, "ncaa_mens_upcoming"):
+                        self.ncaa_mens_upcoming = None
 
             # Initialize NCAA Women's managers if enabled
             if self.ncaa_womens_enabled:
-                self.ncaa_womens_live = NCAAWHockeyLiveManager(
-                    ncaa_womens_config, self.display_manager, self.cache_manager
-                )
-                self.ncaa_womens_recent = NCAAWHockeyRecentManager(
-                    ncaa_womens_config, self.display_manager, self.cache_manager
-                )
-                self.ncaa_womens_upcoming = NCAAWHockeyUpcomingManager(
-                    ncaa_womens_config, self.display_manager, self.cache_manager
-                )
-                self.logger.info("NCAA Women's Hockey managers initialized")
+                try:
+                    self.ncaa_womens_live = NCAAWHockeyLiveManager(
+                        ncaa_womens_config, self.display_manager, self.cache_manager
+                    )
+                    self.ncaa_womens_recent = NCAAWHockeyRecentManager(
+                        ncaa_womens_config, self.display_manager, self.cache_manager
+                    )
+                    self.ncaa_womens_upcoming = NCAAWHockeyUpcomingManager(
+                        ncaa_womens_config, self.display_manager, self.cache_manager
+                    )
+                    self.logger.info("NCAA Women's Hockey managers initialized")
+                except Exception as e:
+                    self.logger.error(f"Failed to initialize NCAA Women's Hockey managers: {e}", exc_info=True)
+                    # Set to None so hasattr checks work correctly
+                    if not hasattr(self, "ncaa_womens_live"):
+                        self.ncaa_womens_live = None
+                    if not hasattr(self, "ncaa_womens_recent"):
+                        self.ncaa_womens_recent = None
+                    if not hasattr(self, "ncaa_womens_upcoming"):
+                        self.ncaa_womens_upcoming = None
 
         except Exception as e:
             self.logger.error(f"Error initializing managers: {e}", exc_info=True)
@@ -511,12 +541,21 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
                         
                         # Fallback: if no live content, show any enabled live manager
                         if not managers_to_try:
-                            if self.nhl_enabled and hasattr(self, "nhl_live"):
-                                managers_to_try.append(self.nhl_live)
-                            if self.ncaa_mens_enabled and hasattr(self, "ncaa_mens_live"):
-                                managers_to_try.append(self.ncaa_mens_live)
-                            if self.ncaa_womens_enabled and hasattr(self, "ncaa_womens_live"):
-                                managers_to_try.append(self.ncaa_womens_live)
+                            if self.nhl_enabled:
+                                if hasattr(self, "nhl_live") and self.nhl_live is not None:
+                                    managers_to_try.append(self.nhl_live)
+                                else:
+                                    self.logger.debug(f"NHL enabled but nhl_live manager not available (hasattr: {hasattr(self, 'nhl_live')})")
+                            if self.ncaa_mens_enabled:
+                                if hasattr(self, "ncaa_mens_live") and self.ncaa_mens_live is not None:
+                                    managers_to_try.append(self.ncaa_mens_live)
+                                else:
+                                    self.logger.debug(f"NCAA Men's enabled but ncaa_mens_live manager not available (hasattr: {hasattr(self, 'ncaa_mens_live')})")
+                            if self.ncaa_womens_enabled:
+                                if hasattr(self, "ncaa_womens_live") and self.ncaa_womens_live is not None:
+                                    managers_to_try.append(self.ncaa_womens_live)
+                                else:
+                                    self.logger.debug(f"NCAA Women's enabled but ncaa_womens_live manager not available (hasattr: {hasattr(self, 'ncaa_womens_live')})")
                     elif mode_type == "recent":
                         if self.nhl_enabled and hasattr(self, "nhl_recent"):
                             managers_to_try.append(self.nhl_recent)
@@ -558,11 +597,22 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
                     
                     # No manager had content
                     if not managers_to_try:
+                        # Add diagnostic information about manager availability
+                        nhl_available = hasattr(self, "nhl_live") and self.nhl_live is not None
+                        ncaa_mens_available = hasattr(self, "ncaa_mens_live") and self.ncaa_mens_live is not None
+                        ncaa_womens_available = hasattr(self, "ncaa_womens_live") and self.ncaa_womens_live is not None
                         self.logger.warning(
                             f"No managers available for mode: {display_mode} "
-                            f"(NHL enabled: {self.nhl_enabled}, NCAA Men's enabled: {self.ncaa_mens_enabled}, "
-                            f"NCAA Women's enabled: {self.ncaa_womens_enabled})"
+                            f"(NHL enabled: {self.nhl_enabled}, manager available: {nhl_available}; "
+                            f"NCAA Men's enabled: {self.ncaa_mens_enabled}, manager available: {ncaa_mens_available}; "
+                            f"NCAA Women's enabled: {self.ncaa_womens_enabled}, manager available: {ncaa_womens_available})"
                         )
+                        # Log additional diagnostic info if NHL is enabled but manager not available
+                        if self.nhl_enabled and not nhl_available:
+                            self.logger.error(
+                                f"NHL is enabled but nhl_live manager is not available. "
+                                f"This suggests manager initialization failed. Check earlier error logs."
+                            )
                     else:
                         self.logger.debug(
                             f"No content available for mode: {display_mode} after trying {len(managers_to_try)} manager(s)"

@@ -1712,6 +1712,8 @@ class SportsLive(SportsCore):
         self.log_interval = 300
         self.last_count_log_time = 0  # Track when we last logged count data
         self.count_log_interval = 5  # Only log count data every 5 seconds
+        # Initialize test_mode - defaults to False (live mode)
+        self.test_mode = self.mode_config.get("test_mode", False)
 
     def update(self):
         """Update live game data and handle game switching."""
