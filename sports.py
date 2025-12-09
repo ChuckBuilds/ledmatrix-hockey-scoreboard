@@ -59,8 +59,16 @@ class SportsCore(ABC):
         self.is_enabled: bool = self.mode_config.get("enabled", False)
         self.show_odds: bool = self.mode_config.get("show_odds", False)
         # Use LogoDownloader to get the correct default logo directory for this sport
-        from src.logo_downloader import LogoDownloader
-        default_logo_dir = Path(LogoDownloader().get_logo_directory(sport_key))
+        # Import from src to ensure we get the full LogoDownloader with get_logo_directory
+        from src.logo_downloader import LogoDownloader as MainLogoDownloader
+        try:
+            logo_downloader = MainLogoDownloader()
+            default_logo_dir = Path(logo_downloader.get_logo_directory(sport_key))
+            self.logger.info(f"Logo directory for sport_key='{sport_key}': {default_logo_dir}")
+        except Exception as e:
+            # Fallback to default directory structure
+            self.logger.warning(f"Failed to get logo directory for sport_key='{sport_key}': {e}, using fallback")
+            default_logo_dir = Path(f"assets/sports/{sport_key}_logos")
         self.logo_dir = default_logo_dir
         self.update_interval: int = self.mode_config.get("update_interval_seconds", 60)
         self.show_records: bool = self.mode_config.get("show_records", False)
