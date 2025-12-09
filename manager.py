@@ -494,9 +494,9 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
                         if not managers_to_try:
                             if self.nhl_enabled and hasattr(self, "nhl_live"):
                                 managers_to_try.append(self.nhl_live)
-                            elif self.ncaa_mens_enabled and hasattr(self, "ncaa_mens_live"):
+                            if self.ncaa_mens_enabled and hasattr(self, "ncaa_mens_live"):
                                 managers_to_try.append(self.ncaa_mens_live)
-                            elif self.ncaa_womens_enabled and hasattr(self, "ncaa_womens_live"):
+                            if self.ncaa_womens_enabled and hasattr(self, "ncaa_womens_live"):
                                 managers_to_try.append(self.ncaa_womens_live)
                     elif mode_type == "recent":
                         if self.nhl_enabled and hasattr(self, "nhl_recent"):
