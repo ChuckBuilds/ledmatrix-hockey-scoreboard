@@ -467,6 +467,68 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
 
             # If display_mode is provided, use it to determine which manager to call
             if display_mode:
+                # Handle registered plugin mode names (hockey_live, hockey_recent, hockey_upcoming)
+                if display_mode in ["hockey_live", "hockey_recent", "hockey_upcoming"]:
+                    mode_type = display_mode.replace("hockey_", "")
+                    # Route to the first available league for this mode type
+                    # For live mode, prioritize leagues with live content and live_priority enabled
+                    managers_to_try = []
+                    if mode_type == "live":
+                        # Check NHL first (highest priority)
+                        if (self.nhl_enabled and self.nhl_live_priority and 
+                            hasattr(self, "nhl_live") and 
+                            bool(getattr(self.nhl_live, "live_games", []))):
+                            managers_to_try.append(self.nhl_live)
+                        # Check NCAA Men's
+                        if (self.ncaa_mens_enabled and self.ncaa_mens_live_priority and 
+                            hasattr(self, "ncaa_mens_live") and 
+                            bool(getattr(self.ncaa_mens_live, "live_games", []))):
+                            managers_to_try.append(self.ncaa_mens_live)
+                        # Check NCAA Women's
+                        if (self.ncaa_womens_enabled and self.ncaa_womens_live_priority and 
+                            hasattr(self, "ncaa_womens_live") and 
+                            bool(getattr(self.ncaa_womens_live, "live_games", []))):
+                            managers_to_try.append(self.ncaa_womens_live)
+                        
+                        # Fallback: if no live content, show any enabled live manager
+                        if not managers_to_try:
+                            if self.nhl_enabled and hasattr(self, "nhl_live"):
+                                managers_to_try.append(self.nhl_live)
+                            elif self.ncaa_mens_enabled and hasattr(self, "ncaa_mens_live"):
+                                managers_to_try.append(self.ncaa_mens_live)
+                            elif self.ncaa_womens_enabled and hasattr(self, "ncaa_womens_live"):
+                                managers_to_try.append(self.ncaa_womens_live)
+                    elif mode_type == "recent":
+                        if self.nhl_enabled and hasattr(self, "nhl_recent"):
+                            managers_to_try.append(self.nhl_recent)
+                        if self.ncaa_mens_enabled and hasattr(self, "ncaa_mens_recent"):
+                            managers_to_try.append(self.ncaa_mens_recent)
+                        if self.ncaa_womens_enabled and hasattr(self, "ncaa_womens_recent"):
+                            managers_to_try.append(self.ncaa_womens_recent)
+                    elif mode_type == "upcoming":
+                        if self.nhl_enabled and hasattr(self, "nhl_upcoming"):
+                            managers_to_try.append(self.nhl_upcoming)
+                        if self.ncaa_mens_enabled and hasattr(self, "ncaa_mens_upcoming"):
+                            managers_to_try.append(self.ncaa_mens_upcoming)
+                        if self.ncaa_womens_enabled and hasattr(self, "ncaa_womens_upcoming"):
+                            managers_to_try.append(self.ncaa_womens_upcoming)
+                    
+                    # Use the first available manager
+                    for current_manager in managers_to_try:
+                        if current_manager:
+                            # Determine which league we're displaying for tracking
+                            if current_manager == getattr(self, "nhl_" + mode_type, None):
+                                self._current_display_league = "nhl"
+                            elif current_manager == getattr(self, "ncaa_mens_" + mode_type, None):
+                                self._current_display_league = "ncaa_mens"
+                            elif current_manager == getattr(self, "ncaa_womens_" + mode_type, None):
+                                self._current_display_league = "ncaa_womens"
+                            self._current_display_mode_type = mode_type
+                            self._ensure_manager_updated(current_manager)
+                            return current_manager.display(force_clear)
+                    
+                    return False
+                
                 # Parse display_mode (e.g., "nhl_live", "ncaa_mens_recent", "ncaa_womens_upcoming")
                 parts = display_mode.split("_", 1)
                 if len(parts) == 2:
@@ -686,31 +748,24 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
         return nhl_live or ncaa_mens_live or ncaa_womens_live
 
     def get_live_modes(self) -> list:
+        """
+        Return the registered plugin mode name(s) that have live content.
+        
+        This should return the mode names as registered in manifest.json, not internal
+        mode names. The plugin is registered with "hockey_live", "hockey_recent", "hockey_upcoming".
+        """
         if not self.is_enabled:
             return []
 
-        prioritized_modes = []
-        if self.nhl_enabled and self.nhl_live_priority and "nhl_live" in self.modes:
-            prioritized_modes.append("nhl_live")
-
-        if (
-            self.ncaa_mens_enabled
-            and self.ncaa_mens_live_priority
-            and "ncaa_mens_live" in self.modes
-        ):
-            prioritized_modes.append("ncaa_mens_live")
-
-        if (
-            self.ncaa_womens_enabled
-            and self.ncaa_womens_live_priority
-            and "ncaa_womens_live" in self.modes
-        ):
-            prioritized_modes.append("ncaa_womens_live")
-
-        if prioritized_modes:
-            return prioritized_modes
-
-        return [mode for mode in self.modes if mode.endswith("_live")]
+        # Check if any league has live content
+        has_any_live = self.has_live_content()
+        
+        if has_any_live:
+            # Return the registered plugin mode name, not internal mode names
+            # The plugin is registered with "hockey_live" in manifest.json
+            return ["hockey_live"]
+        
+        return []
 
     def _get_manager_for_mode(self, mode_type: str):
         """Get the manager for a specific mode type (live, recent, upcoming)."""
