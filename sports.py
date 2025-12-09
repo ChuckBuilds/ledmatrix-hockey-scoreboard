@@ -1685,11 +1685,15 @@ class SportsLive(SportsCore):
         self.update_interval = self.mode_config.get("live_update_interval", 15)
         self.no_data_interval = 300
         # Log the configured interval for debugging
-        self.logger.info(
-            f"SportsLive initialized: live_update_interval={self.update_interval}s, "
-            f"no_data_interval={self.no_data_interval}s, "
-            f"mode_config keys={list(self.mode_config.keys())}"
-        )
+        try:
+            mode_config_keys = list(self.mode_config.keys()) if isinstance(self.mode_config, dict) else "N/A"
+            self.logger.info(
+                f"SportsLive initialized: live_update_interval={self.update_interval}s, "
+                f"no_data_interval={self.no_data_interval}s, "
+                f"mode_config keys={mode_config_keys}"
+            )
+        except Exception as e:
+            self.logger.warning(f"Error logging SportsLive initialization: {e}")
         self.last_update = 0
         self.live_games = []
         self.current_game_index = 0
