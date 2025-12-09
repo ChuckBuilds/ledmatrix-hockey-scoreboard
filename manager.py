@@ -474,6 +474,25 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
                     # For live mode, prioritize leagues with live content and live_priority enabled
                     managers_to_try = []
                     if mode_type == "live":
+                        # Ensure managers are updated before checking for live games
+                        if self.nhl_enabled and hasattr(self, "nhl_live"):
+                            try:
+                                self.nhl_live.update()
+                            except Exception as e:
+                                self.logger.debug(f"Error updating NHL live manager: {e}")
+                        
+                        if self.ncaa_mens_enabled and hasattr(self, "ncaa_mens_live"):
+                            try:
+                                self.ncaa_mens_live.update()
+                            except Exception as e:
+                                self.logger.debug(f"Error updating NCAA Men's live manager: {e}")
+                        
+                        if self.ncaa_womens_enabled and hasattr(self, "ncaa_womens_live"):
+                            try:
+                                self.ncaa_womens_live.update()
+                            except Exception as e:
+                                self.logger.debug(f"Error updating NCAA Women's live manager: {e}")
+                        
                         # Check NHL first (highest priority)
                         if (self.nhl_enabled and self.nhl_live_priority and 
                             hasattr(self, "nhl_live") and 
@@ -513,7 +532,7 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
                         if self.ncaa_womens_enabled and hasattr(self, "ncaa_womens_upcoming"):
                             managers_to_try.append(self.ncaa_womens_upcoming)
                     
-                    # Use the first available manager
+                    # Try each manager until one returns True (has content)
                     for current_manager in managers_to_try:
                         if current_manager:
                             # Determine which league we're displaying for tracking
@@ -525,7 +544,29 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
                                 self._current_display_league = "ncaa_womens"
                             self._current_display_mode_type = mode_type
                             self._ensure_manager_updated(current_manager)
-                            return current_manager.display(force_clear)
+                            
+                            result = current_manager.display(force_clear)
+                            # If display returned True, we have content to show
+                            if result is True:
+                                return result
+                            # If result is False, try next manager
+                            elif result is False:
+                                continue
+                            # If result is None or other, assume success
+                            else:
+                                return True
+                    
+                    # No manager had content
+                    if not managers_to_try:
+                        self.logger.warning(
+                            f"No managers available for mode: {display_mode} "
+                            f"(NHL enabled: {self.nhl_enabled}, NCAA Men's enabled: {self.ncaa_mens_enabled}, "
+                            f"NCAA Women's enabled: {self.ncaa_womens_enabled})"
+                        )
+                    else:
+                        self.logger.debug(
+                            f"No content available for mode: {display_mode} after trying {len(managers_to_try)} manager(s)"
+                        )
                     
                     return False
                 
