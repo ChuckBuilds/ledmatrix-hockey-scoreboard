@@ -2,6 +2,18 @@
 
 Display live, recent, and upcoming hockey games across NHL, NCAA Men's, and NCAA Women's hockey on your LED matrix.
 
+
+Recent Game:
+
+<img width="768" height="192" alt="led_matrix_1764889670771" src="https://github.com/user-attachments/assets/1d32b4d9-7d01-4cb2-896b-bc9c889bf188" />
+
+Upcoming Game:
+
+<img width="768" height="192" alt="led_matrix_1764889695301" src="https://github.com/user-attachments/assets/5e6dd53c-0486-4d42-bdaa-6d486729bcc4" />
+
+
+
+
 ## Features
 
 - **Multi-League Support**: NHL, NCAA Men's Hockey, NCAA Women's Hockey
@@ -22,45 +34,14 @@ Display live, recent, and upcoming hockey games across NHL, NCAA Men's, and NCAA
 - No API key required (uses ESPN public API)
 - Internet connection for live data
 
-## Configuration
-
-### Example Configuration
-
-```json
-{
-  "enabled": true,
-  "leagues": {
-    "nhl": true,
-    "ncaa_mens": false,
-    "ncaa_womens": false
-  },
-  "display_modes": {
-    "hockey_live": true,
-    "hockey_recent": true,
-    "hockey_upcoming": true
-  },
-  "favorite_teams": {
-    "nhl": ["TB", "TOR", "BOS"],
-    "ncaa_mens": ["BU", "BC"],
-    "ncaa_womens": []
-  },
-  "prioritize_favorites": true,
-  "show_shots_on_goal": false,
-  "show_powerplay": true,
-  "update_interval": 60,
-  "display_duration": 15,
-  "recent_games_hours": 24,
-  "upcoming_games_hours": 72
-}
-```
-
-### Configuration Options
 
 #### League Selection
 
 - **`leagues.nhl`**: Enable NHL games (default: true)
 - **`leagues.ncaa_mens`**: Enable NCAA Men's Hockey (default: false)
 - **`leagues.ncaa_womens`**: Enable NCAA Women's Hockey (default: false)
+
+  (note: College Club Hockey is not tracked - team like UGA does not have D1 hockey and cannot be shown)
 
 Enable multiple leagues to see games from all selected leagues in rotation.
 
@@ -82,22 +63,6 @@ Specify team abbreviations for each league:
 }
 ```
 
-**Common NHL Team Abbreviations:**
-- TB (Tampa Bay Lightning)
-- TOR (Toronto Maple Leafs)
-- BOS (Boston Bruins)
-- DET (Detroit Red Wings)
-- CHI (Chicago Blackhawks)
-- NYR (New York Rangers)
-- MTL (Montreal Canadiens)
-- [See full list in ESPN API or team logos]
-
-**NCAA Team Abbreviations:**
-- BU (Boston University)
-- BC (Boston College)
-- MICH (University of Michigan)
-- WISC (University of Wisconsin)
-- MINN (University of Minnesota)
 
 #### Display Settings
 
@@ -107,26 +72,7 @@ Specify team abbreviations for each league:
 - **`update_interval`**: Data refresh interval in seconds (15-300, default: 60)
 - **`display_duration`**: How long to show each game in seconds (5-60, default: 15)
 
-#### Time Windows
-
-- **`recent_games_hours`**: How far back to show recent games (1-168 hours, default: 24)
-- **`upcoming_games_hours`**: How far ahead to show upcoming games (1-336 hours, default: 72)
-
-#### Background Service
-
-```json
-"background_service": {
-  "enabled": true,
-  "request_timeout": 30,
-  "max_retries": 3,
-  "priority": 2
-}
-```
-
-- **`enabled`**: Use background data fetching (default: true)
-- **`request_timeout`**: API timeout in seconds (default: 30)
-- **`max_retries`**: Retry attempts on failure (default: 3)
-- **`priority`**: Request priority 1-5, where 1 is highest (default: 2)
+quest priority 1-5, where 1 is highest (default: 2)
 
 ## Display Modes
 
@@ -186,55 +132,6 @@ Add your favorite team abbreviations to the `favorite_teams` object for each lea
 
 Make sure `enabled: true` in the configuration and the plugin is activated in the rotation.
 
-## Display Layout
-
-### 64x32 Display (Recommended)
-
-```
-┌──────────────────────────────────┐
-│ [AWAY]  3  @  2  [HOME]         │
-│ ▲▲▲▲▲  Score   Score  ▼▼▼▼▼    │
-│         P2 - 15:30               │
-│         PP: HOME (5v4)           │
-└──────────────────────────────────┘
-```
-
-### With Logos
-
-```
-┌──────────────────────────────────┐
-│ [LOGO] BOS  3-2  TB [LOGO]      │
-│        P3 - 5:45                 │
-│        SOG: 28-32                │
-└──────────────────────────────────┘
-```
-
-## Usage Tips
-
-### Optimizing for Your Screen
-
-- **64x32**: Can show full details with logos, SOG, powerplay
-- **64x64**: Can show multiple games or larger fonts
-- **128x32**: Can show two games side-by-side
-
-### Favorite Team Strategy
-
-1. **Single Team Fan**: Add one team to favorites for focused view
-2. **Multi-Team Fan**: Add multiple teams across leagues
-3. **Local Teams**: Add your region's teams across all leagues
-4. **Rivalry Focus**: Add division rivals to never miss matchups
-
-### Update Interval
-
-- **Live Games (High Activity)**: 30-60 seconds
-- **Off Season (Low Activity)**: 120-300 seconds
-- **Balance**: 60 seconds (recommended default)
-
-### Display Duration
-
-- **Many Games**: 10 seconds per game
-- **Few Games**: 15-20 seconds per game
-- **Single Game Focus**: 30+ seconds
 
 ## Troubleshooting
 
