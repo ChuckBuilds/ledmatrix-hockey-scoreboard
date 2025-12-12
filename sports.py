@@ -1770,7 +1770,11 @@ class SportsLive(SportsCore):
             if self.show_ranking:
                 self._fetch_team_rankings()
 
-            # Fetch live game data
+            if self.test_mode:
+                # Simulate clock running down in test mode
+                self._test_mode_update()
+            else:
+                # Fetch live game data
                 data = self._fetch_data()
                 new_live_games = []
                 if data and "events" in data:
@@ -1908,9 +1912,12 @@ class SportsLive(SportsCore):
                         self.current_game = None  # Clear current game if fetch fails and no games were active
 
             # Handle game switching (outside test mode check)
+            # Fix: Don't check for switching if last_game_switch is still 0 (games haven't been loaded yet)
+            # This prevents immediate switching when the system has been running for a while before games load
             if (
-True
+                not self.test_mode
                 and len(self.live_games) > 1
+                and self.last_game_switch > 0
                 and (current_time - self.last_game_switch) >= self.game_display_duration
             ):
                 self.current_game_index = (self.current_game_index + 1) % len(
