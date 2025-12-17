@@ -828,43 +828,200 @@
         }
       }
     },
-    "fonts": {
+    "customization": {
       "type": "object",
-      "description": "Font customization (overrides default fonts)",
+      "title": "Display Customization",
+      "description": "Customize fonts for different text elements on the scoreboard",
       "properties": {
+        "score_text": {
+          "type": "object",
+          "title": "Game Score",
+          "description": "Font settings for the game score display",
+          "properties": {
+            "font": {
+              "type": "string",
+              "title": "Font Family",
+              "description": "Select the font to use for scores",
+              "enum": [
+                "PressStart2P-Regular.ttf",
+                "4x6-font.ttf",
+                "5by7.regular.ttf",
+                "5x7.bdf",
+                "4x6.bdf",
+                "cozette.bdf"
+              ],
+              "default": "PressStart2P-Regular.ttf"
+            },
+            "font_size": {
+              "type": "integer",
+              "title": "Font Size",
+              "description": "Font size in pixels",
+              "minimum": 4,
+              "maximum": 16,
+              "default": 10
+            }
+          },
+          "x-propertyOrder": ["font", "font_size"],
+          "additionalProperties": false
+        },
+        "period_text": {
+          "type": "object",
+          "title": "Period/Clock",
+          "description": "Font settings for period, clock, and time remaining text",
+          "properties": {
+            "font": {
+              "type": "string",
+              "title": "Font Family",
+              "description": "Select the font to use",
+              "enum": [
+                "PressStart2P-Regular.ttf",
+                "4x6-font.ttf",
+                "5by7.regular.ttf",
+                "5x7.bdf",
+                "4x6.bdf",
+                "cozette.bdf"
+              ],
+              "default": "PressStart2P-Regular.ttf"
+            },
+            "font_size": {
+              "type": "integer",
+              "title": "Font Size",
+              "description": "Font size in pixels",
+              "minimum": 4,
+              "maximum": 16,
+              "default": 8
+            }
+          },
+          "x-propertyOrder": ["font", "font_size"],
+          "additionalProperties": false
+        },
         "team_name": {
           "type": "object",
+          "title": "Team Names",
+          "description": "Font settings for team name abbreviations",
           "properties": {
-            "family": {"type": "string", "default": "press_start"},
-            "size": {"type": "number", "default": 10},
-            "color": {"type": "string", "default": "#FFFFFF"}
-          }
+            "font": {
+              "type": "string",
+              "title": "Font Family",
+              "description": "Select the font to use",
+              "enum": [
+                "PressStart2P-Regular.ttf",
+                "4x6-font.ttf",
+                "5by7.regular.ttf",
+                "5x7.bdf",
+                "4x6.bdf",
+                "cozette.bdf"
+              ],
+              "default": "PressStart2P-Regular.ttf"
+            },
+            "font_size": {
+              "type": "integer",
+              "title": "Font Size",
+              "description": "Font size in pixels",
+              "minimum": 4,
+              "maximum": 16,
+              "default": 8
+            }
+          },
+          "x-propertyOrder": ["font", "font_size"],
+          "additionalProperties": false
         },
-        "score": {
+        "status_text": {
           "type": "object",
+          "title": "Status Messages",
+          "description": "Font settings for status text (e.g., 'Next Game', 'Final')",
           "properties": {
-            "family": {"type": "string", "default": "press_start"},
-            "size": {"type": "number", "default": 12},
-            "color": {"type": "string", "default": "#FFC800"}
-          }
+            "font": {
+              "type": "string",
+              "title": "Font Family",
+              "description": "Select the font to use",
+              "enum": [
+                "PressStart2P-Regular.ttf",
+                "4x6-font.ttf",
+                "5by7.regular.ttf",
+                "5x7.bdf",
+                "4x6.bdf",
+                "cozette.bdf"
+              ],
+              "default": "4x6-font.ttf"
+            },
+            "font_size": {
+              "type": "integer",
+              "title": "Font Size",
+              "description": "Font size in pixels",
+              "minimum": 4,
+              "maximum": 16,
+              "default": 6
+            }
+          },
+          "x-propertyOrder": ["font", "font_size"],
+          "additionalProperties": false
         },
-        "status": {
+        "detail_text": {
           "type": "object",
+          "title": "Details/Odds",
+          "description": "Font settings for odds and other detail information",
           "properties": {
-            "family": {"type": "string", "default": "four_by_six"},
-            "size": {"type": "number", "default": 6},
-            "color": {"type": "string", "default": "#00FF00"}
-          }
+            "font": {
+              "type": "string",
+              "title": "Font Family",
+              "description": "Select the font to use",
+              "enum": [
+                "PressStart2P-Regular.ttf",
+                "4x6-font.ttf",
+                "5by7.regular.ttf",
+                "5x7.bdf",
+                "4x6.bdf",
+                "cozette.bdf"
+              ],
+              "default": "4x6-font.ttf"
+            },
+            "font_size": {
+              "type": "integer",
+              "title": "Font Size",
+              "description": "Font size in pixels",
+              "minimum": 4,
+              "maximum": 16,
+              "default": 6
+            }
+          },
+          "x-propertyOrder": ["font", "font_size"],
+          "additionalProperties": false
         },
-        "info": {
+        "rank_text": {
           "type": "object",
+          "title": "Rankings",
+          "description": "Font settings for ranking displays",
           "properties": {
-            "family": {"type": "string", "default": "four_by_six"},
-            "size": {"type": "number", "default": 6},
-            "color": {"type": "string", "default": "#CCCCCC"}
-          }
+            "font": {
+              "type": "string",
+              "title": "Font Family",
+              "description": "Select the font to use",
+              "enum": [
+                "PressStart2P-Regular.ttf",
+                "4x6-font.ttf",
+                "5by7.regular.ttf",
+                "5x7.bdf",
+                "4x6.bdf",
+                "cozette.bdf"
+              ],
+              "default": "PressStart2P-Regular.ttf"
+            },
+            "font_size": {
+              "type": "integer",
+              "title": "Font Size",
+              "description": "Font size in pixels",
+              "minimum": 4,
+              "maximum": 16,
+              "default": 10
+            }
+          },
+          "x-propertyOrder": ["font", "font_size"],
+          "additionalProperties": false
         }
-      }
+      },
+      "x-propertyOrder": ["score_text", "period_text", "team_name", "status_text", "detail_text", "rank_text"],
+      "additionalProperties": false
     }
   },
   "required": ["enabled"]

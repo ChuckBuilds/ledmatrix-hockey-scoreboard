@@ -6,6 +6,7 @@ for the hockey scoreboard plugin.
 """
 
 import logging
+import os
 from abc import ABC, abstractmethod
 from datetime import datetime
 from pathlib import Path
@@ -82,25 +83,102 @@ class SportsCore(ABC):
         self._rankings_cache_timestamp = 0
         self._rankings_cache_duration = 3600  # Cache rankings for 1 hour
     
-    def _load_fonts(self):
-        """Load fonts used by the scoreboard."""
-        fonts = {}
+    def _load_custom_font_from_element_config(self, element_config: Dict[str, Any], default_size: int = 8) -> ImageFont.FreeTypeFont:
+        """
+        Load a custom font from an element configuration dictionary.
+        
+        Args:
+            element_config: Configuration dict for a single element containing 'font' and 'font_size' keys
+            default_size: Default font size if not specified in config
+            
+        Returns:
+            PIL ImageFont object
+        """
+        # Get font name and size, with defaults
+        font_name = element_config.get('font', 'PressStart2P-Regular.ttf')
+        font_size = int(element_config.get('font_size', default_size))  # Ensure integer for PIL
+        
+        # Build font path
+        font_path = os.path.join('assets', 'fonts', font_name)
+        
+        # Try to load the font
         try:
-            fonts['score'] = ImageFont.truetype("assets/fonts/PressStart2P-Regular.ttf", 10)
-            fonts['time'] = ImageFont.truetype("assets/fonts/PressStart2P-Regular.ttf", 8)
-            fonts['team'] = ImageFont.truetype("assets/fonts/PressStart2P-Regular.ttf", 8)
-            fonts['status'] = ImageFont.truetype("assets/fonts/4x6-font.ttf", 6)
-            fonts['detail'] = ImageFont.truetype("assets/fonts/4x6-font.ttf", 6)
-            fonts['rank'] = ImageFont.truetype("assets/fonts/PressStart2P-Regular.ttf", 10)
-            self.logger.info("Successfully loaded fonts")
-        except IOError:
-            self.logger.warning("Fonts not found, using default PIL font.")
-            fonts['score'] = ImageFont.load_default()
-            fonts['time'] = ImageFont.load_default()
-            fonts['team'] = ImageFont.load_default()
-            fonts['status'] = ImageFont.load_default()
-            fonts['detail'] = ImageFont.load_default()
-            fonts['rank'] = ImageFont.load_default()
+            if os.path.exists(font_path):
+                # Try loading as TTF first (works for both TTF and some BDF files with PIL)
+                if font_path.lower().endswith('.ttf'):
+                    font = ImageFont.truetype(font_path, font_size)
+                    self.logger.debug(f"Loaded font: {font_name} at size {font_size}")
+                    return font
+                elif font_path.lower().endswith('.bdf'):
+                    # PIL's ImageFont.truetype() can sometimes handle BDF files
+                    # If it fails, we'll fall through to the default font
+                    try:
+                        font = ImageFont.truetype(font_path, font_size)
+                        self.logger.debug(f"Loaded BDF font: {font_name} at size {font_size}")
+                        return font
+                    except Exception:
+                        self.logger.warning(f"Could not load BDF font {font_name} with PIL, using default")
+                        # Fall through to default
+                else:
+                    self.logger.warning(f"Unknown font file type: {font_name}, using default")
+            else:
+                self.logger.warning(f"Font file not found: {font_path}, using default")
+        except Exception as e:
+            self.logger.error(f"Error loading font {font_name}: {e}, using default")
+        
+        # Fall back to default font
+        default_font_path = os.path.join('assets', 'fonts', 'PressStart2P-Regular.ttf')
+        try:
+            if os.path.exists(default_font_path):
+                return ImageFont.truetype(default_font_path, font_size)
+            else:
+                self.logger.warning("Default font not found, using PIL default")
+                return ImageFont.load_default()
+        except Exception as e:
+            self.logger.error(f"Error loading default font: {e}")
+            return ImageFont.load_default()
+    
+    def _load_fonts(self):
+        """Load fonts used by the scoreboard from config or use defaults."""
+        fonts = {}
+        
+        # Get customization config, with backward compatibility
+        customization = self.mode_config.get('customization', {})
+        
+        # Load fonts from config with defaults for backward compatibility
+        score_config = customization.get('score_text', {})
+        period_config = customization.get('period_text', {})
+        team_config = customization.get('team_name', {})
+        status_config = customization.get('status_text', {})
+        detail_config = customization.get('detail_text', {})
+        rank_config = customization.get('rank_text', {})
+        
+        try:
+            fonts['score'] = self._load_custom_font_from_element_config(score_config, default_size=10)
+            fonts['time'] = self._load_custom_font_from_element_config(period_config, default_size=8)
+            fonts['team'] = self._load_custom_font_from_element_config(team_config, default_size=8)
+            fonts['status'] = self._load_custom_font_from_element_config(status_config, default_size=6)
+            fonts['detail'] = self._load_custom_font_from_element_config(detail_config, default_size=6)
+            fonts['rank'] = self._load_custom_font_from_element_config(rank_config, default_size=10)
+            self.logger.info("Successfully loaded fonts from config")
+        except Exception as e:
+            self.logger.error(f"Error loading fonts: {e}, using defaults")
+            # Fallback to hardcoded defaults
+            try:
+                fonts['score'] = ImageFont.truetype("assets/fonts/PressStart2P-Regular.ttf", 10)
+                fonts['time'] = ImageFont.truetype("assets/fonts/PressStart2P-Regular.ttf", 8)
+                fonts['team'] = ImageFont.truetype("assets/fonts/PressStart2P-Regular.ttf", 8)
+                fonts['status'] = ImageFont.truetype("assets/fonts/4x6-font.ttf", 6)
+                fonts['detail'] = ImageFont.truetype("assets/fonts/4x6-font.ttf", 6)
+                fonts['rank'] = ImageFont.truetype("assets/fonts/PressStart2P-Regular.ttf", 10)
+            except IOError:
+                self.logger.warning("Fonts not found, using default PIL font.")
+                fonts['score'] = ImageFont.load_default()
+                fonts['time'] = ImageFont.load_default()
+                fonts['team'] = ImageFont.load_default()
+                fonts['status'] = ImageFont.load_default()
+                fonts['detail'] = ImageFont.load_default()
+                fonts['rank'] = ImageFont.load_default()
         return fonts
     
     def _draw_text_with_outline(self, draw, text, position, font, 
