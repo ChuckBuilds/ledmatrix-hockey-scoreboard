@@ -96,14 +96,15 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
             "live_priority", False
         )
 
-        # Global settings
-        self.display_duration = float(config.get("display_duration", 30))
-        self.game_display_duration = float(config.get("game_display_duration", 15))
+        # Global settings - read from defaults section with fallback
+        defaults = config.get("defaults", {})
+        self.display_duration = float(defaults.get("display_duration", config.get("display_duration", 30)))
+        self.game_display_duration = float(defaults.get("display_duration", config.get("game_display_duration", 15)))
 
-        # Additional settings
-        self.show_records = config.get("show_records", False)
-        self.show_ranking = config.get("show_ranking", False)
-        self.show_odds = config.get("show_odds", False)
+        # Additional settings - read from defaults section with fallback
+        self.show_records = defaults.get("show_records", config.get("show_records", False))
+        self.show_ranking = defaults.get("show_ranking", config.get("show_ranking", False))
+        self.show_odds = defaults.get("show_odds", config.get("show_odds", False))
 
         # Initialize background service if available
         self.background_service = None
@@ -234,8 +235,11 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
 
         Plugin uses: nhl: {...}, ncaa_mens: {...}, ncaa_womens: {...}
         Managers expect: nhl_scoreboard: {...}, ncaa_mens_hockey_scoreboard: {...}, etc.
+        
+        Supports both new nested structure and old flat structure for backward compatibility.
         """
         league_config = self.config.get(league, {})
+        defaults = self.config.get("defaults", {})
 
         # Map league names to sport_key format expected by managers
         sport_key_map = {
@@ -245,9 +249,13 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
         }
         sport_key = sport_key_map.get(league, league)
 
-        # Extract nested configurations
+        # Extract nested configurations (new structure) with fallback to flat structure (old)
         display_modes = league_config.get("display_modes", {})
+        teams_config = league_config.get("teams", {})
         filtering_config = league_config.get("filtering", {})
+        update_intervals = league_config.get("update_intervals", {})
+        display_durations = league_config.get("display_durations", {})
+        display_options = league_config.get("display_options", {})
 
         def resolve_mode_flag(*keys: str, default: bool = True) -> bool:
             for key in keys:
@@ -259,19 +267,57 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
         recent_flag = resolve_mode_flag("recent", "show_recent", "hockey_recent")
         upcoming_flag = resolve_mode_flag("upcoming", "show_upcoming", "hockey_upcoming")
 
-        def resolve_bool(default_key: str, *extra_keys: str, default: bool = False) -> bool:
-            keys = (default_key,) + extra_keys
-            for key in keys:
+        def resolve_value(nested_path: list, flat_keys: list, default):
+            """Resolve value from nested structure or fallback to flat structure."""
+            # Try nested structure first
+            current = league_config
+            for key in nested_path:
+                if isinstance(current, dict) and key in current:
+                    current = current[key]
+                else:
+                    current = None
+                    break
+            if current is not None:
+                return current
+            
+            # Try flat structure (backward compatibility)
+            for key in flat_keys:
                 if key in league_config:
-                    return bool(league_config[key])
-                if key in filtering_config:
-                    return bool(filtering_config[key])
+                    return league_config[key]
+            
+            # Try defaults
+            if nested_path:
+                current = defaults
+                for key in nested_path:
+                    if isinstance(current, dict) and key in current:
+                        current = current[key]
+                    else:
+                        return default
+                return current
+            
             return default
 
-        favorite_only = resolve_bool("favorite_teams_only", "show_favorite_teams_only")
-        show_all_live = resolve_bool("show_all_live")
+        # Resolve team settings
+        favorite_teams = resolve_value(["teams", "favorite_teams"], ["favorite_teams"], [])
+        favorite_only = resolve_value(["teams", "favorite_teams_only"], ["favorite_teams_only"], False)
+        show_all_live = resolve_value(["teams", "show_all_live"], ["show_all_live"], False)
 
+        # Resolve filtering settings
+        recent_games_to_show = resolve_value(["filtering", "recent_games_to_show"], ["recent_games_to_show"], 5)
+        upcoming_games_to_show = resolve_value(["filtering", "upcoming_games_to_show"], ["upcoming_games_to_show"], 10)
+
+        # Resolve update intervals
+        update_interval_seconds = resolve_value(["update_intervals", "base"], ["update_interval_seconds"], 60)
+        live_update_interval = resolve_value(["update_intervals", "live"], ["live_update_interval"], 15)
+        recent_update_interval = resolve_value(["update_intervals", "recent"], ["recent_update_interval"], 3600)
+        upcoming_update_interval = resolve_value(["update_intervals", "upcoming"], ["upcoming_update_interval"], 3600)
+
+        # Resolve display durations
         def resolve_live_duration() -> int:
+            # Try new nested structure
+            if "display_durations" in league_config and "live" in league_config["display_durations"]:
+                return int(league_config["display_durations"]["live"])
+            # Try old flat structure
             if "live_game_duration" in league_config:
                 return int(league_config["live_game_duration"])
             if "game_rotation_interval_seconds" in league_config:
@@ -280,29 +326,37 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
                 return int(league_config["live_display_duration"])
             return 20
 
+        # Resolve display options with defaults fallback
+        show_records = resolve_value(["display_options", "show_records"], ["show_records"], self.show_records)
+        show_ranking = resolve_value(["display_options", "show_ranking"], ["show_ranking"], self.show_ranking)
+        show_odds = resolve_value(["display_options", "show_odds"], ["show_odds"], self.show_odds)
+        show_shots_on_goal = resolve_value(["display_options", "show_shots_on_goal"], ["show_shots_on_goal"], False)
+        show_powerplay = resolve_value(["display_options", "show_powerplay"], ["show_powerplay"], True)
+
         # Create manager config with expected structure
         manager_config = {
             f"{sport_key}_scoreboard": {
                 "enabled": league_config.get("enabled", False),
-                "favorite_teams": league_config.get("favorite_teams", []),
+                "favorite_teams": favorite_teams,
                 "display_modes": {
                     "hockey_live": live_flag,
                     "hockey_recent": recent_flag,
                     "hockey_upcoming": upcoming_flag,
                 },
-                "recent_games_to_show": league_config.get("recent_games_to_show", 5),
-                "upcoming_games_to_show": league_config.get("upcoming_games_to_show", 10),
-                "show_records": league_config.get("show_records", self.show_records),
-                "show_ranking": league_config.get("show_ranking", self.show_ranking),
-                "show_odds": league_config.get("show_odds", self.show_odds),
-                "show_shots_on_goal": league_config.get("show_shots_on_goal", False),
+                "recent_games_to_show": recent_games_to_show,
+                "upcoming_games_to_show": upcoming_games_to_show,
+                "show_records": show_records,
+                "show_ranking": show_ranking,
+                "show_odds": show_odds,
+                "show_shots_on_goal": show_shots_on_goal,
+                "show_powerplay": show_powerplay,
                 "show_favorite_teams_only": favorite_only,
                 "show_all_live": show_all_live,
                 "live_priority": league_config.get("live_priority", False),
-                "update_interval_seconds": league_config.get(
-                    "update_interval_seconds", 60
-                ),
-                "live_update_interval": league_config.get("live_update_interval", 15),
+                "update_interval_seconds": update_interval_seconds,
+                "live_update_interval": live_update_interval,
+                "recent_update_interval": recent_update_interval,
+                "upcoming_update_interval": upcoming_update_interval,
                 "live_game_duration": resolve_live_duration(),
                 "background_service": {
                     "request_timeout": 30,
