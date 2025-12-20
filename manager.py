@@ -577,35 +577,52 @@ class HockeyScoreboardPlugin(BasePlugin if BasePlugin else object):
                             except Exception as e:
                                 self.logger.debug(f"Error updating NCAA Women's live manager: {e}")
                         
+                        # Helper to check if live mode is enabled for a league
+                        def is_live_mode_enabled(league: str) -> bool:
+                            league_config = self.config.get(league, {})
+                            display_modes = league_config.get("display_modes", {})
+                            # Check new nested structure first, then fallback to old structure
+                            return display_modes.get("live", display_modes.get("hockey_live", True))
+                        
                         # Check NHL first (highest priority)
-                        if (self.nhl_enabled and self.nhl_live_priority and 
+                        if (self.nhl_enabled and is_live_mode_enabled("nhl") and
                             hasattr(self, "nhl_live") and 
                             bool(getattr(self.nhl_live, "live_games", []))):
-                            managers_to_try.append(self.nhl_live)
+                            # Prioritize if live_priority is enabled, otherwise add to fallback list
+                            if self.nhl_live_priority:
+                                managers_to_try.insert(0, self.nhl_live)
+                            else:
+                                managers_to_try.append(self.nhl_live)
                         # Check NCAA Men's
-                        if (self.ncaa_mens_enabled and self.ncaa_mens_live_priority and 
+                        if (self.ncaa_mens_enabled and is_live_mode_enabled("ncaa_mens") and
                             hasattr(self, "ncaa_mens_live") and 
                             bool(getattr(self.ncaa_mens_live, "live_games", []))):
-                            managers_to_try.append(self.ncaa_mens_live)
+                            if self.ncaa_mens_live_priority:
+                                managers_to_try.insert(0, self.ncaa_mens_live)
+                            else:
+                                managers_to_try.append(self.ncaa_mens_live)
                         # Check NCAA Women's
-                        if (self.ncaa_womens_enabled and self.ncaa_womens_live_priority and 
+                        if (self.ncaa_womens_enabled and is_live_mode_enabled("ncaa_womens") and
                             hasattr(self, "ncaa_womens_live") and 
                             bool(getattr(self.ncaa_womens_live, "live_games", []))):
-                            managers_to_try.append(self.ncaa_womens_live)
+                            if self.ncaa_womens_live_priority:
+                                managers_to_try.insert(0, self.ncaa_womens_live)
+                            else:
+                                managers_to_try.append(self.ncaa_womens_live)
                         
-                        # Fallback: if no live content, show any enabled live manager
+                        # Fallback: if no live games found, show any enabled live manager (for empty state display)
                         if not managers_to_try:
-                            if self.nhl_enabled:
+                            if self.nhl_enabled and is_live_mode_enabled("nhl"):
                                 if hasattr(self, "nhl_live") and self.nhl_live is not None:
                                     managers_to_try.append(self.nhl_live)
                                 else:
                                     self.logger.debug(f"NHL enabled but nhl_live manager not available (hasattr: {hasattr(self, 'nhl_live')})")
-                            if self.ncaa_mens_enabled:
+                            if self.ncaa_mens_enabled and is_live_mode_enabled("ncaa_mens"):
                                 if hasattr(self, "ncaa_mens_live") and self.ncaa_mens_live is not None:
                                     managers_to_try.append(self.ncaa_mens_live)
                                 else:
                                     self.logger.debug(f"NCAA Men's enabled but ncaa_mens_live manager not available (hasattr: {hasattr(self, 'ncaa_mens_live')})")
-                            if self.ncaa_womens_enabled:
+                            if self.ncaa_womens_enabled and is_live_mode_enabled("ncaa_womens"):
                                 if hasattr(self, "ncaa_womens_live") and self.ncaa_womens_live is not None:
                                     managers_to_try.append(self.ncaa_womens_live)
                                 else:
