@@ -967,16 +967,49 @@ class SportsUpcoming(SportsCore):
                         unique_team_games.append(game)
                 team_games = unique_team_games
             else:
-                # No favorite teams: apply total limit (not per-team)
-                # Example: upcoming_games_to_show=1 shows the next 1 game total (earliest)
-                team_games = processed_games
-                # Sort by game time, earliest first
+                # No favorite teams: apply per-team limit to ALL teams
+                # Example: upcoming_games_to_show=1 with 32 teams = up to 32 games total (1 per team)
+                # Extract all unique teams from processed games
+                all_teams = set()
+                for game in processed_games:
+                    home_abbr = game.get("home_abbr")
+                    away_abbr = game.get("away_abbr")
+                    if home_abbr:
+                        all_teams.add(home_abbr)
+                    if away_abbr:
+                        all_teams.add(away_abbr)
+                
+                # Apply per-team limit to all teams
+                team_games = []
+                for team in all_teams:
+                    # Find games where this team is playing
+                    team_specific_games = [
+                        game
+                        for game in processed_games
+                        if game.get("home_abbr") == team or game.get("away_abbr") == team
+                    ]
+                    if team_specific_games:
+                        # Sort by game time and take the earliest N games
+                        team_specific_games.sort(
+                            key=lambda g: g.get("start_time_utc")
+                            or datetime.max.replace(tzinfo=timezone.utc)
+                        )
+                        # Take up to upcoming_games_to_show games for this team
+                        team_games.extend(team_specific_games[: self.upcoming_games_to_show])
+                
+                # Sort the final list by game time (earliest first)
                 team_games.sort(
                     key=lambda g: g.get("start_time_utc")
                     or datetime.max.replace(tzinfo=timezone.utc)
                 )
-                # Limit to the specified number of upcoming games (total, not per-team)
-                team_games = team_games[: self.upcoming_games_to_show]
+                # Remove duplicates (in case a game involves multiple teams)
+                seen_ids = set()
+                unique_team_games = []
+                for game in team_games:
+                    if game.get("id") not in seen_ids:
+                        seen_ids.add(game.get("id"))
+                        unique_team_games.append(game)
+                team_games = unique_team_games
 
             # Log changes or periodically
             should_log = (
@@ -1436,20 +1469,55 @@ class SportsRecent(SportsCore):
                             f"Game {i+1} for display: {game['away_abbr']} @ {game['home_abbr']} - {game.get('start_time_utc')} - Score: {game['away_score']}-{game['home_score']}"
                         )
             else:
-                # No favorite teams: apply total limit (not per-team)
-                # Example: recent_games_to_show=5 shows the 5 most recent games total
-                team_games = processed_games
+                # No favorite teams: apply per-team limit to ALL teams
+                # Example: recent_games_to_show=1 with 32 teams = up to 32 games total (1 per team)
+                # Extract all unique teams from processed games
+                all_teams = set()
+                for game in processed_games:
+                    home_abbr = game.get("home_abbr")
+                    away_abbr = game.get("away_abbr")
+                    if home_abbr:
+                        all_teams.add(home_abbr)
+                    if away_abbr:
+                        all_teams.add(away_abbr)
+                
                 self.logger.info(
-                    f"Found {len(processed_games)} total final games within last 21 days (no favorite teams configured)"
+                    f"Found {len(processed_games)} total final games within last 21 days (no favorite teams configured, applying per-team limits to {len(all_teams)} teams)"
                 )
-                # Sort by game time, most recent first
+                
+                # Apply per-team limit to all teams
+                team_games = []
+                for team in all_teams:
+                    # Find games where this team is playing
+                    team_specific_games = [
+                        game
+                        for game in processed_games
+                        if game.get("home_abbr") == team or game.get("away_abbr") == team
+                    ]
+                    if team_specific_games:
+                        # Sort by game time and take the most recent N games
+                        team_specific_games.sort(
+                            key=lambda g: g.get("start_time_utc")
+                            or datetime.min.replace(tzinfo=timezone.utc),
+                            reverse=True,
+                        )
+                        # Take up to recent_games_to_show games for this team
+                        team_games.extend(team_specific_games[: self.recent_games_to_show])
+                
+                # Sort the final list by game time (most recent first)
                 team_games.sort(
                     key=lambda g: g.get("start_time_utc")
                     or datetime.min.replace(tzinfo=timezone.utc),
                     reverse=True,
                 )
-                # Limit to the specified number of recent games (total, not per-team)
-                team_games = team_games[: self.recent_games_to_show]
+                # Remove duplicates (in case a game involves multiple teams)
+                seen_ids = set()
+                unique_team_games = []
+                for game in team_games:
+                    if game.get("id") not in seen_ids:
+                        seen_ids.add(game.get("id"))
+                        unique_team_games.append(game)
+                team_games = unique_team_games
 
             # Check if the list of games to display has changed
             new_game_ids = {g["id"] for g in team_games}
