@@ -258,6 +258,42 @@ class SportsCore(ABC):
             self.logger.error(f"Error loading default font: {e}")
             return ImageFont.load_default()
     
+    def _get_layout_offset(self, element: str, axis: str, default: int = 0) -> int:
+        """
+        Get layout offset for a specific element and axis.
+        
+        Args:
+            element: Element name (e.g., 'home_logo', 'score', 'status_text')
+            axis: 'x_offset' or 'y_offset' (or 'away_x_offset', 'home_x_offset' for records)
+            default: Default value if not configured (default: 0)
+        
+        Returns:
+            Offset value from config or default (always returns int)
+        """
+        try:
+            layout_config = self.config.get('customization', {}).get('layout', {})
+            element_config = layout_config.get(element, {})
+            offset_value = element_config.get(axis, default)
+            
+            # Ensure we return an integer (handle float/string from config)
+            if isinstance(offset_value, (int, float)):
+                return int(offset_value)
+            elif isinstance(offset_value, str):
+                # Try to convert string to int
+                try:
+                    return int(float(offset_value))
+                except (ValueError, TypeError):
+                    self.logger.warning(
+                        f"Invalid layout offset value for {element}.{axis}: '{offset_value}', using default {default}"
+                    )
+                    return default
+            else:
+                return default
+        except Exception as e:
+            # Gracefully handle any config access errors
+            self.logger.debug(f"Error reading layout offset for {element}.{axis}: {e}, using default {default}")
+            return default
+    
     def _load_fonts(self):
         """Load fonts used by the scoreboard from config or use defaults."""
         fonts = {}
@@ -1119,13 +1155,13 @@ class SportsUpcoming(SportsCore):
 
             center_y = self.display_height // 2
 
-            # MLB-style logo positions
-            home_x = self.display_width - home_logo.width + 2
-            home_y = center_y - (home_logo.height // 2)
+            # MLB-style logo positions with layout offsets
+            home_x = self.display_width - home_logo.width + 2 + self._get_layout_offset('home_logo', 'x_offset')
+            home_y = center_y - (home_logo.height // 2) + self._get_layout_offset('home_logo', 'y_offset')
             main_img.paste(home_logo, (home_x, home_y), home_logo)
 
-            away_x = -2
-            away_y = center_y - (away_logo.height // 2)
+            away_x = -2 + self._get_layout_offset('away_logo', 'x_offset')
+            away_y = center_y - (away_logo.height // 2) + self._get_layout_offset('away_logo', 'y_offset')
             main_img.paste(away_logo, (away_x, away_y), away_logo)
 
             # Draw Text Elements on Overlay
@@ -1134,31 +1170,31 @@ class SportsUpcoming(SportsCore):
 
             # Note: Rankings are now handled in the records/rankings section below
 
-            # "Next Game" at the top (use smaller status font)
+            # "Next Game" at the top (use smaller status font) with layout offsets
             status_font = self.fonts["status"]
             if self.display_width > 128:
                 status_font = self.fonts["time"]
             status_text = "Next Game"
             status_width = draw_overlay.textlength(status_text, font=status_font)
-            status_x = (self.display_width - status_width) // 2
-            status_y = 1  # Changed from 2
+            status_x = (self.display_width - status_width) // 2 + self._get_layout_offset('status_text', 'x_offset')
+            status_y = 1 + self._get_layout_offset('status_text', 'y_offset')  # Changed from 2
             self._draw_text_with_outline(
                 draw_overlay, status_text, (status_x, status_y), status_font
             )
 
-            # Date text (centered, below "Next Game")
+            # Date text (centered, below "Next Game") with layout offsets
             date_width = draw_overlay.textlength(game_date, font=self.fonts["time"])
-            date_x = (self.display_width - date_width) // 2
+            date_x = (self.display_width - date_width) // 2 + self._get_layout_offset('date', 'x_offset')
             # Adjust Y position to stack date and time nicely
-            date_y = center_y - 7  # Raise date slightly
+            date_y = center_y - 7 + self._get_layout_offset('date', 'y_offset')  # Raise date slightly
             self._draw_text_with_outline(
                 draw_overlay, game_date, (date_x, date_y), self.fonts["time"]
             )
 
-            # Time text (centered, below Date)
+            # Time text (centered, below Date) with layout offsets
             time_width = draw_overlay.textlength(game_time, font=self.fonts["time"])
-            time_x = (self.display_width - time_width) // 2
-            time_y = date_y + 9  # Place time below date
+            time_x = (self.display_width - time_width) // 2 + self._get_layout_offset('time', 'x_offset')
+            time_y = date_y + 9 + self._get_layout_offset('time', 'y_offset')  # Place time below date
             self._draw_text_with_outline(
                 draw_overlay, game_time, (time_x, time_y), self.fonts["time"]
             )
@@ -1186,7 +1222,7 @@ class SportsUpcoming(SportsCore):
 
                 record_bbox = draw_overlay.textbbox((0, 0), "0-0", font=record_font)
                 record_height = record_bbox[3] - record_bbox[1]
-                record_y = self.display_height - record_height
+                record_y = self.display_height - record_height + self._get_layout_offset('records', 'y_offset')
                 self.logger.debug(
                     f"Record positioning: height={record_height}, record_y={record_y}, display_height={self.display_height}"
                 )
@@ -1215,7 +1251,7 @@ class SportsUpcoming(SportsCore):
                         away_text = ""
 
                     if away_text:
-                        away_record_x = 0
+                        away_record_x = 0 + self._get_layout_offset('records', 'away_x_offset')
                         self.logger.debug(
                             f"Drawing away ranking '{away_text}' at ({away_record_x}, {record_y}) with font size {record_font.size if hasattr(record_font, 'size') else 'unknown'}"
                         )
@@ -1254,7 +1290,7 @@ class SportsUpcoming(SportsCore):
                             (0, 0), home_text, font=record_font
                         )
                         home_record_width = home_record_bbox[2] - home_record_bbox[0]
-                        home_record_x = self.display_width - home_record_width
+                        home_record_x = self.display_width - home_record_width + self._get_layout_offset('records', 'home_x_offset')
                         self.logger.debug(
                             f"Drawing home ranking '{home_text}' at ({home_record_x}, {record_y}) with font size {record_font.size if hasattr(record_font, 'size') else 'unknown'}"
                         )
@@ -1609,36 +1645,36 @@ class SportsRecent(SportsCore):
 
             center_y = self.display_height // 2
 
-            # MLB-style logo positioning (closer to edges)
-            home_x = self.display_width - home_logo.width + 2
-            home_y = center_y - (home_logo.height // 2)
+            # MLB-style logo positioning (closer to edges) with layout offsets
+            home_x = self.display_width - home_logo.width + 2 + self._get_layout_offset('home_logo', 'x_offset')
+            home_y = center_y - (home_logo.height // 2) + self._get_layout_offset('home_logo', 'y_offset')
             main_img.paste(home_logo, (home_x, home_y), home_logo)
 
-            away_x = -2
-            away_y = center_y - (away_logo.height // 2)
+            away_x = -2 + self._get_layout_offset('away_logo', 'x_offset')
+            away_y = center_y - (away_logo.height // 2) + self._get_layout_offset('away_logo', 'y_offset')
             main_img.paste(away_logo, (away_x, away_y), away_logo)
 
             # Draw Text Elements on Overlay
             # Note: Rankings are now handled in the records/rankings section below
 
-            # Final Scores (Centered, same position as live)
+            # Final Scores (Centered, same position as live) with layout offsets
             home_score = str(game.get("home_score", "0"))
             away_score = str(game.get("away_score", "0"))
             score_text = f"{away_score}-{home_score}"
             score_width = draw_overlay.textlength(score_text, font=self.fonts["score"])
-            score_x = (self.display_width - score_width) // 2
-            score_y = self.display_height - 14
+            score_x = (self.display_width - score_width) // 2 + self._get_layout_offset('score', 'x_offset')
+            score_y = self.display_height - 14 + self._get_layout_offset('score', 'y_offset')
             self._draw_text_with_outline(
                 draw_overlay, score_text, (score_x, score_y), self.fonts["score"]
             )
 
-            # "Final" text (Top center)
+            # "Final" text (Top center) with layout offsets
             status_text = game.get(
                 "period_text", "Final"
             )  # Use formatted period text (e.g., "Final/OT") or default "Final"
             status_width = draw_overlay.textlength(status_text, font=self.fonts["time"])
-            status_x = (self.display_width - status_width) // 2
-            status_y = 1
+            status_x = (self.display_width - status_width) // 2 + self._get_layout_offset('status_text', 'x_offset')
+            status_y = 1 + self._get_layout_offset('status_text', 'y_offset')
             self._draw_text_with_outline(
                 draw_overlay, status_text, (status_x, status_y), self.fonts["time"]
             )
@@ -1666,7 +1702,7 @@ class SportsRecent(SportsCore):
 
                 record_bbox = draw_overlay.textbbox((0, 0), "0-0", font=record_font)
                 record_height = record_bbox[3] - record_bbox[1]
-                record_y = self.display_height - record_height
+                record_y = self.display_height - record_height + self._get_layout_offset('records', 'y_offset')
                 self.logger.debug(
                     f"Record positioning: height={record_height}, record_y={record_y}, display_height={self.display_height}"
                 )
@@ -1695,7 +1731,7 @@ class SportsRecent(SportsCore):
                         away_text = ""
 
                     if away_text:
-                        away_record_x = 0
+                        away_record_x = 0 + self._get_layout_offset('records', 'away_x_offset')
                         self.logger.debug(
                             f"Drawing away ranking '{away_text}' at ({away_record_x}, {record_y}) with font size {record_font.size if hasattr(record_font, 'size') else 'unknown'}"
                         )
@@ -1734,7 +1770,7 @@ class SportsRecent(SportsCore):
                             (0, 0), home_text, font=record_font
                         )
                         home_record_width = home_record_bbox[2] - home_record_bbox[0]
-                        home_record_x = self.display_width - home_record_width
+                        home_record_x = self.display_width - home_record_width + self._get_layout_offset('records', 'home_x_offset')
                         self.logger.debug(
                             f"Drawing home ranking '{home_text}' at ({home_record_x}, {record_y}) with font size {record_font.size if hasattr(record_font, 'size') else 'unknown'}"
                         )

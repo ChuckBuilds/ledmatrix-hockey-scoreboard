@@ -1019,9 +1019,142 @@
           },
           "x-propertyOrder": ["font", "font_size"],
           "additionalProperties": false
+        },
+        "layout": {
+          "type": "object",
+          "title": "Layout Positioning",
+          "description": "Adjust X,Y coordinate offsets for elements. Values are relative to default positions. Use negative values to move left/up, positive to move right/down.",
+          "properties": {
+            "home_logo": {
+              "type": "object",
+              "title": "Home Team Logo",
+              "properties": {
+                "x_offset": {
+                  "type": "integer",
+                  "default": 0,
+                  "description": "Horizontal offset from default position (default: 0)"
+                },
+                "y_offset": {
+                  "type": "integer",
+                  "default": 0,
+                  "description": "Vertical offset from default position (default: 0)"
+                }
+              },
+              "additionalProperties": false
+            },
+            "away_logo": {
+              "type": "object",
+              "title": "Away Team Logo",
+              "properties": {
+                "x_offset": {
+                  "type": "integer",
+                  "default": 0,
+                  "description": "Horizontal offset from default position (default: 0)"
+                },
+                "y_offset": {
+                  "type": "integer",
+                  "default": 0,
+                  "description": "Vertical offset from default position (default: 0)"
+                }
+              },
+              "additionalProperties": false
+            },
+            "score": {
+              "type": "object",
+              "title": "Game Score",
+              "properties": {
+                "x_offset": {
+                  "type": "integer",
+                  "default": 0,
+                  "description": "Horizontal offset from center (default: 0)"
+                },
+                "y_offset": {
+                  "type": "integer",
+                  "default": 0,
+                  "description": "Vertical offset from center (default: 0)"
+                }
+              },
+              "additionalProperties": false
+            },
+            "status_text": {
+              "type": "object",
+              "title": "Status/Period Text",
+              "properties": {
+                "x_offset": {
+                  "type": "integer",
+                  "default": 0,
+                  "description": "Horizontal offset from center (default: 0)"
+                },
+                "y_offset": {
+                  "type": "integer",
+                  "default": 0,
+                  "description": "Vertical offset from top (default: 0)"
+                }
+              },
+              "additionalProperties": false
+            },
+            "date": {
+              "type": "object",
+              "title": "Game Date",
+              "properties": {
+                "x_offset": {
+                  "type": "integer",
+                  "default": 0,
+                  "description": "Horizontal offset from center (default: 0)"
+                },
+                "y_offset": {
+                  "type": "integer",
+                  "default": 0,
+                  "description": "Vertical offset from default position (default: 0)"
+                }
+              },
+              "additionalProperties": false
+            },
+            "time": {
+              "type": "object",
+              "title": "Game Time",
+              "properties": {
+                "x_offset": {
+                  "type": "integer",
+                  "default": 0,
+                  "description": "Horizontal offset from center (default: 0)"
+                },
+                "y_offset": {
+                  "type": "integer",
+                  "default": 0,
+                  "description": "Vertical offset from date position (default: 0)"
+                }
+              },
+              "additionalProperties": false
+            },
+            "records": {
+              "type": "object",
+              "title": "Records/Rankings",
+              "properties": {
+                "away_x_offset": {
+                  "type": "integer",
+                  "default": 0,
+                  "description": "Away team record horizontal offset from left (default: 0)"
+                },
+                "home_x_offset": {
+                  "type": "integer",
+                  "default": 0,
+                  "description": "Home team record horizontal offset from right (default: 0)"
+                },
+                "y_offset": {
+                  "type": "integer",
+                  "default": 0,
+                  "description": "Vertical offset from bottom (default: 0)"
+                }
+              },
+              "additionalProperties": false
+            }
+          },
+          "x-propertyOrder": ["home_logo", "away_logo", "score", "status_text", "date", "time", "records"],
+          "additionalProperties": false
         }
       },
-      "x-propertyOrder": ["score_text", "period_text", "team_name", "status_text", "detail_text", "rank_text"],
+      "x-propertyOrder": ["score_text", "period_text", "team_name", "status_text", "detail_text", "rank_text", "layout"],
       "additionalProperties": false
     }
   },
